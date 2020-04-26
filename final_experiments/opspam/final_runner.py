@@ -3,6 +3,7 @@ import sys
 import csv
 import importlib
 import spamGAN_train_DCG_gpt2
+import spamGAN_train_DCG_gpt2_cpu
 import random
 import time
 
@@ -172,7 +173,7 @@ for train_pcent in [0.1, 0.3, 0.5, 0.7, 0.9, 1.0]:
             
             # Unit test
             base_config.gen_clas_test = True
-            dict_all_res, dict_bestclas_pretrain_res, dict_bestclas_acc_res, dict_bestclas_f1_res, dict_bestclas_mixed_res = spamGAN_train_DCG_gpt2.main(base_config)
+            dict_all_res, dict_bestclas_pretrain_res, dict_bestclas_acc_res, dict_bestclas_f1_res, dict_bestclas_mixed_res = spamGAN_train_DCG_gpt2_cpu.main(base_config)
 
             all_file_exists = os.path.isfile(data_paths["all_result_file"])
             f = open(data_paths["all_result_file"],'a')

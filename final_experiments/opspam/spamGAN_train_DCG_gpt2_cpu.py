@@ -4,6 +4,7 @@ import importlib
 import numpy as np
 import logging
 import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import sys
 import time
 from copy import deepcopy
