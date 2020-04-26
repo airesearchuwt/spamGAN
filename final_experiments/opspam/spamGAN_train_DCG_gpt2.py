@@ -170,6 +170,15 @@ def main(config = None):
 #         print('Using config: {}'.format(config))
 #         config = importlib.import_module(config)
 
+    # Testing with CPU due to GPU memory limitation
+    import os
+    if config.gen_clas_test is True:
+        os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+        print("Testing mode detected, using CPU...")
+    else:
+        print("Training mode detected, using GPU...")
+        
+
     g = tf.Graph()
     with g.as_default():
         logger = get_logger(config.log_dir)

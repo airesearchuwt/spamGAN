@@ -172,6 +172,7 @@ def main(config = None):
         config = importlib.import_module(config)
         
     # Testing with CPU due to GPU memory limitation
+    import os
     if config.gen_clas_test is True:
         os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
         print("Testing mode detected, using CPU...")
