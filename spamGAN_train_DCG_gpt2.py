@@ -1,7 +1,7 @@
 import tensorflow as tf
 import texar.tf as tx
-import importlib
 import json
+import csv
 import numpy as np
 import logging
 import os
@@ -12,6 +12,7 @@ from copy import deepcopy
 from custom_texar import custom_helpers
 from custom_texar.custom_multi_aligned_data import MultiAlignedData
 from custom_texar.custom_gpt2_decoder import GPT2Decoder
+from custom_texar.custom_gpt2_stack import GPT2Stack
 
 # import wrapper
 
@@ -29,7 +30,10 @@ class Generator(tf.keras.Model):
     """Generator wrapper for checkpointing"""
     def __init__(self, gen_config):
         super(Generator, self).__init__()
-        self.decoder = GPT2Decoder(
+#         self.decoder = GPT2Decoder(
+#             hparams=gen_config["gpt2_decoder"],
+#             encode_mode=False)
+        self.decoder = GPT2Stack(
             hparams=gen_config["gpt2_decoder"],
             encode_mode=False)
         self.word_embedder = self.decoder.word_embedder

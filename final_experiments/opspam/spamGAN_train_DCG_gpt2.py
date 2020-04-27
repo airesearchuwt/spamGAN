@@ -1,7 +1,7 @@
 import tensorflow as tf
 import texar.tf as tx
-import importlib
 import json
+import csv
 import numpy as np
 import logging
 import os

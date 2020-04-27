@@ -3,8 +3,9 @@
 	"is_bert_trainable": true,
 	"is_xlnet_trainable": true,
 
-	"sample_strategy": "train_sample",
+	"sample_strategy": "infer_sample",
 	"beam_width": 4,
+	
 
 	"restore_model": false,
 	"clear_run_logs": false,
