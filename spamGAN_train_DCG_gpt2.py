@@ -50,12 +50,12 @@ class Discriminator(tf.keras.Model):
     """Discriminator wrapper"""
     def __init__(self, disc_config):
         super(Discriminator, self).__init__()
-        self.encoder = GPT2Decoder(
+#         self.encoder = GPT2Decoder(
+#             hparams=disc_config["gpt2_decoder"],
+#             encode_mode=True)
+        self.decoder = GPT2Stack(
             hparams=disc_config["gpt2_decoder"],
             encode_mode=True)
-#         self.encoder = GPT2Encoder(
-#             hparams=disc_config["gpt2_encoder"])
-        
         self.word_embedder = self.encoder.word_embedder
         self.position_embedder = self.encoder.position_embedder
             
@@ -68,12 +68,12 @@ class Discriminator(tf.keras.Model):
 class Classifier(tf.keras.Model):
     def __init__(self, class_config):
         super(Classifier, self).__init__()
-        self.encoder = GPT2Decoder(
-            hparams=class_config["gpt2_decoder"],
+#         self.encoder = GPT2Decoder(
+#             hparams=class_config["gpt2_decoder"],
+#             encode_mode=True)
+        self.decoder = GPT2Stack(
+            hparams=disc_config["gpt2_decoder"],
             encode_mode=True)
-#         self.encoder = GPT2Encoder(
-#             hparams=class_config["gpt2_encoder"])
-        
         self.word_embedder = self.encoder.word_embedder
         self.position_embedder = self.encoder.position_embedder
 
