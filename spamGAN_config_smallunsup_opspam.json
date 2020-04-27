@@ -1,0 +1,595 @@
+{
+	"is_gpt2_trainable": true,
+	"is_bert_trainable": true,
+	"is_xlnet_trainable": true,
+
+	"sample_strategy": "train_sample",
+	"beam_width": 4,
+
+	"restore_model": false,
+	"clear_run_logs": false,
+	"log_dir": "/tmp/",
+	"checkpoint_dir": "/tmp",
+	"load_checkpoint_file": null,
+
+	"gen_clas_test": false,
+	"gen_test": false,
+	"gen_perp_output": "perplexities.txt",
+	"clas_test": false,
+	"clas_test_ckpts": [
+		"ckpt-all",
+		"ckpt-bestclas-pretrain",
+		"ckpt-bestclas-acc",
+		"ckpt-bestclas-f1",
+		"ckpt-bestclas-mixed"
+	],
+	"clas_pred_output": "testpreds.txt",
+
+
+	"log_verbose_mle": true,
+	"log_verbose_rl": true,
+	"batches_per_summary": 100,
+	"batches_per_text_summary": 100,
+
+
+	"g_unlab_every_n": 3,
+	"g_pretrain_epochs": 6,
+	"d_pretrain_epochs": 4,
+	"d_pretrain_critic_epochs": 0,
+	"c_pretrain_epochs": 4,
+	"adversarial_epochs": 5,
+
+	"disc_adv_epochs": 1,
+	"clas_adv_epochs": 10,
+
+	"gen_adv_epochs": 2,
+	"g_unlab_every_n_adv": -1,
+	"gen_mle_adv_epochs": 1,
+
+	"adv_train_max_gen_examples": 1000,
+	"adv_disc_max_ex": 1000,
+	"adv_gen_train_with_unsup": false,
+
+
+	"gen_es_tolerance": 0.005,
+	"gen_patience": 20,
+	"disc_es_tolerance": 0.005,
+	"disc_patience": 10,
+	"clas_es_tolerance": 0.005,
+	"clas_patience": 10,
+
+
+	"max_decoding_length": 256,
+	"max_decoding_length_infer": 256,
+	"annealing_length": 256,
+	"adversarial_length": 256,
+
+	"sampling_temperature": 1.0,
+
+	"linear_decay_pg_weights": true,
+
+	"prior_prob": 0.5,
+	"noise_size": 64,
+	"class_size": 9,
+
+
+	"disc_label_smoothing_epsilon": 0.25,
+
+	"adv_max_clip": 100,
+	"min_log_prob": 0.1,
+	"max_log_prob": 100,
+	"min_pg_loss": -200,
+	"max_pg_loss": 200,
+
+
+	"add_sentence_progress": true,
+
+	"clas_loss_on_fake_lambda": 1.0,
+	"disc_crit_train_on_fake_only": true,
+	"clas_crit_train_on_fake_only": true,
+
+	"reward_blending": "f1",
+
+	"clas_min_ent_lambda": 1.0,
+
+	"clas_has_own_embedder": true,
+	"disc_has_own_embedder": true,
+
+	"mle_loss_in_adv": true,
+
+	"discriminator_loss_lambda": 1.0,
+	"classifier_loss_lambda": 1.0,
+
+	"norm_advantages": true,
+
+
+	"train_data": {
+		"num_epochs": 1,
+		"batch_size": 2,
+		"allow_smaller_final_batch": true,
+		"shuffle": true,
+		"shuffle_buffer_size": null,
+		"shard_and_shuffle": false,
+
+		"num_parallel_calls": 1,
+		"prefetch_buffer_size": 0,
+		"max_dataset_size": -1,
+		"seed": null,
+		"name": "train_data",
+		"datasets": [{
+				"files": ["./gpt2/minrun_train_reviews_bpe.txt"],
+				"vocab_file": "./gpt2/gpt2_vocab.txt",
+				"max_seq_length": 256,
+				"length_filter_mode": "truncate",
+				"bos_token": "<BOS>",
+				"delimiter": " ",
+				"eos_token": "<EOS>",
+				"data_name": "x",
+				"pad_to_max_seq_length": true
+			},
+			{
+				"files": ["./minrun_train_labels.txt"],
+				"data_type": "int",
+				"data_name": "label"
+			}
+		]
+	},
+
+
+	"clas_train_data": {
+		"num_epochs": 1,
+		"batch_size": 2,
+		"allow_smaller_final_batch": true,
+		"shuffle": true,
+		"shuffle_buffer_size": null,
+		"shard_and_shuffle": false,
+
+		"num_parallel_calls": 1,
+		"prefetch_buffer_size": 0,
+		"max_dataset_size": -1,
+		"seed": null,
+		"name": "train_data",
+		"datasets": [{
+				"files": ["./gpt2/minrun_train_reviews_bpe_nounsup.txt"],
+				"vocab_file": "./gpt2/gpt2_vocab.txt",
+				"max_seq_length": 256,
+				"length_filter_mode": "truncate",
+				"bos_token": "<BOS>",
+				"delimiter": " ",
+				"eos_token": "<EOS>",
+				"data_name": "x",
+				"pad_to_max_seq_length": true
+			},
+			{
+				"files": ["./gpt2/minrun_train_labels_nounsup.txt"],
+				"data_type": "int",
+				"data_name": "label"
+			}
+		]
+	},
+
+
+	"val_data": {
+		"num_epochs": 1,
+		"batch_size": 2,
+		"allow_smaller_final_batch": true,
+		"shuffle": true,
+		"shuffle_buffer_size": null,
+		"shard_and_shuffle": false,
+
+		"num_parallel_calls": 1,
+		"prefetch_buffer_size": 0,
+		"max_dataset_size": -1,
+		"seed": null,
+		"name": "val_data",
+
+		"datasets": [{
+				"files": ["./gpt2/minrun_val_reviews_bpe.txt"],
+				"vocab_file": "./gpt2/gpt2_vocab.txt",
+				"max_seq_length": 256,
+				"length_filter_mode": "truncate",
+				"bos_token": "<BOS>",
+				"delimiter": " ",
+				"eos_token": "<EOS>",
+				"data_name": "x",
+				"pad_to_max_seq_length": true
+			},
+			{
+				"files": ["./minrun_val_labels.txt"],
+				"data_type": "int",
+				"data_name": "label"
+			}
+		]
+	},
+
+
+	"test_data": {
+		"num_epochs": 1,
+		"batch_size": 2,
+		"allow_smaller_final_batch": true,
+		"shuffle": false,
+		"shuffle_buffer_size": null,
+		"shard_and_shuffle": false,
+		"num_parallel_calls": 1,
+		"prefetch_buffer_size": 0,
+		"max_dataset_size": -1,
+		"seed": null,
+		"name": "test_data",
+		"datasets": [{
+				"files": ["./gpt2/minrun_test_reviews_bpe.txt"],
+				"vocab_file": "./gpt2/gpt2_vocab.txt",
+				"max_seq_length": 256,
+				"length_filter_mode": "truncate",
+				"bos_token": "<BOS>",
+				"delimiter": " ",
+				"eos_token": "<EOS>",
+				"data_name": "x",
+				"pad_to_max_seq_length": true
+			},
+			{
+				"files": ["minrun_test_labels.txt"],
+				"data_type": "int",
+				"data_name": "label"
+			}
+		]
+	},
+
+
+
+	"gen_hparams": {
+
+		"gpt2_decoder": {
+			"pretrained_model_name": "gpt2-small",
+			"vocab_size": 50257,
+			"context_size": 1024,
+			"embedding_size": 768,
+			"embed": {
+				"dim": 768,
+				"name": "word_embeddings"
+			},
+			"position_size": 1024,
+			"position_embed": {
+				"dim": 768,
+				"name": "position_embeddings"
+			},
+
+			"decoder": {
+				"dim": 768,
+				"num_blocks": 12,
+				"embedding_dropout": 0.1,
+				"residual_dropout": 0.1,
+				"multihead_attention": {
+					"use_bias": true,
+					"num_units": 768,
+					"num_heads": 12,
+					"dropout_rate": 0.1,
+					"output_dim": 768
+				},
+				"initializer": {
+					"type": "variance_scaling_initializer",
+					"kwargs": {
+						"factor": 1.0,
+						"mode": "FAN_AVG",
+						"uniform": true
+					}
+				},
+				"poswise_feedforward": {
+					"layers": [{
+							"type": "Dense",
+							"kwargs": {
+								"activation": "gelu",
+								"name": "intermediate",
+								"units": 3072,
+								"use_bias": true
+							}
+						},
+						{
+							"type": "Dense",
+							"kwargs": {
+								"activation": null,
+								"name": "output",
+								"units": 3072,
+								"use_bias": true
+							}
+						}
+					],
+					"name": "ffn"
+				}
+			},
+			"name": "generator"
+		}
+	},
+
+
+	"disc_hparams": {
+
+		"gpt2_decoder": {
+			"pretrained_model_name": "gpt2-small",
+			"vocab_size": 50257,
+			"context_size": 1024,
+			"embedding_size": 768,
+			"embed": {
+				"dim": 768,
+				"name": "word_embeddings"
+			},
+			"position_size": 1024,
+			"position_embed": {
+				"dim": 768,
+				"name": "position_embeddings"
+			},
+
+			"decoder": {
+				"dim": 768,
+				"num_blocks": 12,
+				"embedding_dropout": 0.1,
+				"residual_dropout": 0.1,
+				"multihead_attention": {
+					"use_bias": true,
+					"num_units": 768,
+					"num_heads": 12,
+					"dropout_rate": 0.1,
+					"output_dim": 768
+				},
+				"initializer": {
+					"type": "variance_scaling_initializer",
+					"kwargs": {
+						"factor": 1.0,
+						"mode": "FAN_AVG",
+						"uniform": true
+					}
+				},
+				"poswise_feedforward": {
+					"layers": [{
+							"type": "Dense",
+							"kwargs": {
+								"activation": "gelu",
+								"name": "intermediate",
+								"units": 3072,
+								"use_bias": true
+							}
+						},
+						{
+							"type": "Dense",
+							"kwargs": {
+								"activation": null,
+								"name": "output",
+								"units": 3072,
+								"use_bias": true
+							}
+						}
+					],
+					"name": "ffn"
+				}
+			},
+			"name": "discriminator"
+		}
+	},
+
+
+	"disc_crit_hparams": {
+		"units": 1,
+		"activation": "linear"
+	},
+
+
+	"clas_hparams": {
+
+		"gpt2_decoder": {
+			"pretrained_model_name": "gpt2-small",
+			"vocab_size": 50257,
+			"context_size": 1024,
+			"embedding_size": 768,
+			"embed": {
+				"dim": 768,
+				"name": "word_embeddings"
+			},
+			"position_size": 1024,
+			"position_embed": {
+				"dim": 768,
+				"name": "position_embeddings"
+			},
+
+			"decoder": {
+				"dim": 768,
+				"num_blocks": 12,
+				"embedding_dropout": 0.1,
+				"residual_dropout": 0.1,
+				"multihead_attention": {
+					"use_bias": true,
+					"num_units": 768,
+					"num_heads": 12,
+					"dropout_rate": 0.1,
+					"output_dim": 768
+				},
+				"initializer": {
+					"type": "variance_scaling_initializer",
+					"kwargs": {
+						"factor": 1.0,
+						"mode": "FAN_AVG",
+						"uniform": true
+					}
+				},
+				"poswise_feedforward": {
+					"layers": [{
+							"type": "Dense",
+							"kwargs": {
+								"activation": "gelu",
+								"name": "intermediate",
+								"units": 3072,
+								"use_bias": true
+							}
+						},
+						{
+							"type": "Dense",
+							"kwargs": {
+								"activation": null,
+								"name": "output",
+								"units": 3072,
+								"use_bias": true
+							}
+						}
+					],
+					"name": "ffn"
+				}
+			},
+			"name": "classifier"
+		}
+	},
+
+	"clas_crit_hparams": {
+		"units": 1,
+		"activation": "linear"
+	},
+
+
+	"g_opt_mle_hparams": {
+		"optimizer": {
+			"type": "tensorflow.contrib.opt.AdamWOptimizer",
+			"kwargs": {
+				"weight_decay": 1e-4,
+				"learning_rate": 6.25e-4
+			}
+		},
+		"learning_rate_decay": {
+			"type": "",
+			"kwargs": {},
+			"min_learning_rate": 0.0,
+			"start_decay_step": 0,
+			"end_decay_step": 1e10
+		},
+		"gradient_clip": {
+			"type": "tensorflow.clip_by_global_norm",
+			"kwargs": {
+				"clip_norm": 5
+			}
+		},
+		"gradient_noise_scale": null,
+		"name": null
+	},
+
+	"g_opt_pg_hparams": {
+		"optimizer": {
+			"type": "tensorflow.contrib.opt.AdamWOptimizer",
+			"kwargs": {
+				"weight_decay": 1e-7,
+				"learning_rate": 6.25e-5
+			}
+		},
+		"learning_rate_decay": {
+			"type": "",
+			"kwargs": {},
+			"min_learning_rate": 0.0,
+			"start_decay_step": 0,
+			"end_decay_step": 1e10
+		},
+		"gradient_clip": {
+			"type": "tensorflow.clip_by_global_norm",
+			"kwargs": {
+				"clip_norm": 5
+			}
+		},
+		"gradient_noise_scale": null,
+		"name": null
+	},
+
+	"c_opt_hparams": {
+		"optimizer": {
+			"type": "tensorflow.contrib.opt.AdamWOptimizer",
+			"kwargs": {
+				"weight_decay": 1e-5,
+				"learning_rate": 6.25e-5
+			}
+		},
+		"learning_rate_decay": {
+			"type": "",
+			"kwargs": {},
+			"min_learning_rate": 0.0,
+			"start_decay_step": 0,
+			"end_decay_step": 1e10
+		},
+		"gradient_clip": {
+			"type": "tensorflow.clip_by_global_norm",
+			"kwargs": {
+				"clip_norm": 1
+			}
+		},
+		"gradient_noise_scale": null,
+		"name": null
+	},
+
+	"d_opt_hparams": {
+		"optimizer": {
+			"type": "tensorflow.contrib.opt.AdamWOptimizer",
+			"kwargs": {
+				"weight_decay": 1.25e-7,
+				"learning_rate": 1.25e-7
+			}
+		},
+		"learning_rate_decay": {
+			"type": "",
+			"kwargs": {},
+			"min_learning_rate": 0.0,
+			"start_decay_step": 0,
+			"end_decay_step": 1e10
+		},
+		"gradient_clip": {
+			"type": "tensorflow.clip_by_global_norm",
+			"kwargs": {
+				"clip_norm": 1
+			}
+		},
+		"gradient_noise_scale": null,
+		"name": null
+	},
+
+	"d_crit_opt_hparams": {
+		"optimizer": {
+			"type": "tensorflow.contrib.opt.AdamWOptimizer",
+			"kwargs": {
+				"weight_decay": 1e-4,
+				"learning_rate": 0.0001
+			}
+		},
+		"learning_rate_decay": {
+			"type": "",
+			"kwargs": {},
+			"min_learning_rate": 0.0,
+			"start_decay_step": 0,
+			"end_decay_step": 1e10
+		},
+		"gradient_clip": {
+			"type": "tensorflow.clip_by_global_norm",
+			"kwargs": {
+				"clip_norm": 1e6
+			}
+		},
+		"gradient_noise_scale": null,
+		"name": null
+	},
+
+	"c_crit_opt_hparams": {
+		"optimizer": {
+			"type": "tensorflow.contrib.opt.AdamWOptimizer",
+			"kwargs": {
+				"weight_decay": 1e-4,
+				"learning_rate": 0.0001
+			}
+		},
+		"learning_rate_decay": {
+			"type": "",
+			"kwargs": {},
+			"min_learning_rate": 0.0,
+			"start_decay_step": 0,
+			"end_decay_step": 1e10
+		},
+		"gradient_clip": {
+			"type": "tensorflow.clip_by_global_norm",
+			"kwargs": {
+				"clip_norm": 1e6
+			}
+		},
+		"gradient_noise_scale": null,
+		"name": null
+	}
+}
+	

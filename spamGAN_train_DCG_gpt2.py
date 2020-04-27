@@ -1,8 +1,10 @@
 import tensorflow as tf
 import texar.tf as tx
 import importlib
+import json
 import numpy as np
 import logging
+import os
 import sys
 import time
 from copy import deepcopy
@@ -10,8 +12,8 @@ from copy import deepcopy
 from custom_texar import custom_helpers
 from custom_texar.custom_multi_aligned_data import MultiAlignedData
 from custom_texar.custom_gpt2_decoder import GPT2Decoder
-from custom_texar.custom_gpt2_encoder import GPT2Encoder
-from custom_texar.custom_gpt2_stack import GPT2Stack
+
+# import wrapper
 
 
 
@@ -27,10 +29,7 @@ class Generator(tf.keras.Model):
     """Generator wrapper for checkpointing"""
     def __init__(self, gen_config):
         super(Generator, self).__init__()
-#         self.decoder = GPT2Decoder(
-#             hparams=gen_config["gpt2_decoder"],
-#             encode_mode=False)
-        self.decoder = GPT2Stack(
+        self.decoder = GPT2Decoder(
             hparams=gen_config["gpt2_decoder"],
             encode_mode=False)
         self.word_embedder = self.decoder.word_embedder
@@ -84,9 +83,7 @@ class Embedder(tf.keras.Model):
 class GPT2Embedder(tf.keras.Model):
     def __init__(self, gpt2_emb_config):
         super(GPT2Embedder, self).__init__()
-#         self.gpt2_emb_model = GPT2Decoder(hparams=gpt2_emb_config)
-#         self.embedder = self.gpt2_emb_model.embeddings()
-        self.gpt2_emb_model = GPT2Encoder(hparams=gpt2_emb_config["gpt2_encoder"])
+        self.gpt2_emb_model = GPT2Decoder(hparams=gpt2_emb_config["gpt2_decoder"])
         self.embedder = self.gpt2_emb_model.embeddings()
         
         self.word_embedder = self.gpt2_emb_model.word_embedder
@@ -162,45 +159,28 @@ def main(config = None):
 #     timer = wrapper.PyTimingCPU()
 #     timer.StartCounter()
     
-    # Setup
-    if config is None:
-        print('No config given...')
-#         config = importlib.import_module('spamGAN_config_minimal')
-        config = importlib.import_module('spamGAN_config_smallunsup_opspam')
-    else:
-        print('Using config: {}'.format(config))
-        config = importlib.import_module(config)
-        
-    # Testing with CPU due to GPU memory limitation
-    import os
-    if config.gen_clas_test is True:
-        os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-        print("Testing mode detected, using CPU...")
-    else:
-        print("Training mode detected, using GPU...")
-        
     g = tf.Graph()
     with g.as_default():
-        logger = get_logger(config.log_dir)
+        logger = get_logger(config["log_dir"])
         global_step = tf.train.get_or_create_global_step()
         global_mode = tx.global_mode()
         
         # Get data
         logger.info("Constructing graph...")
-#         train_data = tx.data.MultiAlignedData(config.train_data)
-#         val_data = tx.data.MultiAlignedData(config.val_data)
-#         test_data = tx.data.MultiAlignedData(config.test_data)
-        train_data = MultiAlignedData(config.train_data)
-        val_data = MultiAlignedData(config.val_data)
-        test_data = MultiAlignedData(config.test_data)
-        clas_train_data_hparams = deepcopy(config.train_data)
+#         train_data = tx.data.MultiAlignedData(config["train_data)
+#         val_data = tx.data.MultiAlignedData(config["val_data)
+#         test_data = tx.data.MultiAlignedData(config["test_data)
+        train_data = MultiAlignedData(config["train_data"])
+        val_data = MultiAlignedData(config["val_data"])
+        test_data = MultiAlignedData(config["test_data"])
+        clas_train_data_hparams = deepcopy(config["train_data"])
         # Get only the first file, which includes only labeled data.
-#         clas_train_data = tx.data.MultiAlignedData(config.clas_train_data)
-#         clas_val_data = tx.data.MultiAlignedData(config.val_data)
-#         clas_test_data = tx.data.MultiAlignedData(config.test_data)
-        clas_train_data = MultiAlignedData(config.clas_train_data)
-        clas_val_data = MultiAlignedData(config.val_data)
-        clas_test_data = MultiAlignedData(config.test_data)
+#         clas_train_data = tx.data.MultiAlignedData(config["clas_train_data)
+#         clas_val_data = tx.data.MultiAlignedData(config["val_data)
+#         clas_test_data = tx.data.MultiAlignedData(config["test_data)
+        clas_train_data = MultiAlignedData(config["clas_train_data"])
+        clas_val_data = MultiAlignedData(config["val_data"])
+        clas_test_data = MultiAlignedData(config["test_data"])
         unsup_iterator = tx.data.TrainTestDataIterator(train=train_data,
                                                  val=val_data,
                                                  test=test_data)
@@ -242,55 +222,55 @@ def main(config = None):
         logger.info("Building model components...")
         
         # Embeddings
-#         emb_model = Embedder(vocab_size, config.emb_hparams)
-#         emb_model = GPT2Embedder(config.gpt2_emb_hparams)
-        emb_model = GPT2Embedder(config.disc_hparams)
+#         emb_model = Embedder(vocab_size, config["emb_hparams)
+#         emb_model = GPT2Embedder(config["gpt2_emb_hparams)
+        emb_model = GPT2Embedder(config["disc_hparams"])
         embedder = emb_model.embedder
         
         # Generator
-#         gen_model = Generator(vocab_size, config.gen_hparams["rnn_decoder"], generator_dropout)
+#         gen_model = Generator(vocab_size, config["gen_hparams["rnn_decoder"], generator_dropout)
         generator_dropout = tf.placeholder(tf.string)
-        gen_model = Generator(config.gen_hparams)
+        gen_model = Generator(config["gen_hparams"])
         g_decoder = gen_model.decoder
 #         initial_state = g_decoder.zero_state(batch_size = batch_size,
 #                                              dtype=tf.float32)
 
         # Discriminator
-#         if config.disc_has_own_embedder:
-#             disc_embedder_model = Embedder(vocab_size, config.disc_emb_hparams)
+#         if config["disc_has_own_embedder:
+#             disc_embedder_model = Embedder(vocab_size, config["disc_emb_hparams)
 #             disc_embedder = disc_embedder_model.embedder
 #         else:
 #             disc_embedder = embedder
             
         discriminator_dropout = tf.placeholder(dtype=tf.string)
-        disc_model = Discriminator(config.disc_hparams, discriminator_dropout)
+        disc_model = Discriminator(config["disc_hparams"], discriminator_dropout)
         discriminator = disc_model.encoder
         
-        if config.disc_has_own_embedder:
+        if config["disc_has_own_embedder"]:
             disc_embedder = discriminator.embeddings()
         else:
             disc_embedder = embedder
 
         # Classifier
-#         if config.clas_has_own_embedder: 
-#             clas_emb_model = Embedder(vocab_size, config.clas_emb_hparams)
+#         if config["clas_has_own_embedder: 
+#             clas_emb_model = Embedder(vocab_size, config["clas_emb_hparams)
 #             clas_embedder = clas_emb_model.embedder
 #         else:
 #             clas_embedder = embedder
 
         classifier_dropout = tf.placeholder(dtype=tf.string)
-        clas_model = Classifier(config.clas_hparams, classifier_dropout)
+        clas_model = Classifier(config["clas_hparams"], classifier_dropout)
         classifier = clas_model.encoder
 
-        if config.clas_has_own_embedder: 
+        if config["clas_has_own_embedder"]: 
             clas_embedder = classifier.embeddings()
         else:
             clas_embedder = embedder
 
         # Critics
-        disc_crit_layer = tf.layers.Dense(**config.disc_crit_hparams)
+        disc_crit_layer = tf.layers.Dense(**config["disc_crit_hparams"])
         disc_crit = tf.keras.layers.TimeDistributed(disc_crit_layer)
-        clas_crit_layer = tf.layers.Dense(**config.clas_crit_hparams)
+        clas_crit_layer = tf.layers.Dense(**config["clas_crit_hparams"])
         clas_crit = tf.keras.layers.TimeDistributed(clas_crit_layer)
 
         logger.info("Creating Generator MLE training subgraph...")
@@ -304,8 +284,8 @@ def main(config = None):
             
             x_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(x)[1]) # Trim non-ending sentences. 
 
-            context_size = config.noise_size
-            class_size = config.class_size
+            context_size = config["noise_size"]
+            class_size = config["class_size"]
             context = tf.random.normal((batch_size, context_size))
             reclass_unlab = tf.zeros_like(all_data_labels, dtype=tf.float32)
             true_classes = tf.where(labeled, tf.cast(all_data_labels, tf.float32), reclass_unlab)
@@ -350,8 +330,8 @@ def main(config = None):
 #             g_variables = tx.utils.collect_trainable_variables([embedder, g_decoder])
             
             mle_optimizer = tx.core.get_optimizer(global_step=global_step,
-                                                  hparams=config.g_opt_mle_hparams)
-            if config.is_gpt2_trainable == True:
+                                                  hparams=config["g_opt_mle_hparams"])
+            if config["is_gpt2_trainable"] is True:
                 g_variables = tx.utils.collect_trainable_variables([g_decoder,
                                                                     g_decoder.word_embedder,
                                                                     g_decoder.position_embedder])
@@ -389,16 +369,16 @@ def main(config = None):
 
         # Generate subgraph
         with g.name_scope('gen_sample'):
-            if config.annealing_length > 0:
-                max_length = tf.Variable(config.annealing_length, dtype=tf.int32)
+            if config["annealing_length"] > 0:
+                max_length = tf.Variable(config["annealing_length"], dtype=tf.int32)
             else:
-                max_length = tf.Variable(config.max_decoding_length_infer, dtype=tf.int32)
+                max_length = tf.Variable(config["max_decoding_length_infer"], dtype=tf.int32)
             logger.info("Creating token sequence sampling subgraph...")
             start_tokens = tf.cast(tf.fill([batch_size], 
                                    vocab.bos_token_id),
                                    dtype=tf.int32)
-            random_context = tf.random.normal([batch_size, config.noise_size])
-            class_prior = tf.distributions.Bernoulli(probs=config.prior_prob)
+            random_context = tf.random.normal([batch_size, config["noise_size"]])
+            class_prior = tf.distributions.Bernoulli(probs=config["prior_prob"])
             random_classes = class_prior.sample((batch_size, 1))
 #             random_vector = tf.concat([random_context, 
 #                                        tf.cast(random_classes, tf.float32)], 
@@ -409,7 +389,7 @@ def main(config = None):
                                        axis=-1)
             random_class_onehots = tf.one_hot(random_classes, 2, axis=-1)
             end_token = vocab.eos_token_id
-            softmax_temperature = tf.constant(config.sampling_temperature, dtype=tf.float32)
+            softmax_temperature = tf.constant(config["sampling_temperature"], dtype=tf.float32)
 #             context_helper = custom_helpers.ContextSampleEmbeddingHelper(
 #                 embedder, random_vector, start_tokens, end_token, softmax_temperature)
            
@@ -420,7 +400,7 @@ def main(config = None):
 #                 max_decoding_length=max_length)
            
             # Specify sample strategy
-            sample_strategy = config.sample_strategy
+            sample_strategy = config["sample_strategy"]
             logger.info("Sampling using decoding strategy: {}...".format(sample_strategy))
             
             # Obtain lengths of generated sentences 
@@ -496,7 +476,7 @@ def main(config = None):
                 gen_outputs = g_decoder(
                     decoding_strategy="train_sample",
                     inputs=gen_inputs,
-                    softmax_temperature=config.sampling_temperature,
+                    softmax_temperature=config["sampling_temperature"],
                     mode=generator_dropout,
                     mle_context=tiled_random_vector
                     )
@@ -505,9 +485,9 @@ def main(config = None):
                 gen_lengths = get_gen_lengths(gen_sample_ids)
 
             elif sample_strategy == "beam_search":
-                beam_width = config.beam_width
-                beam_random_context = tf.random.normal([beam_width * batch_size, config.noise_size])
-                beam_class_prior = tf.distributions.Bernoulli(probs=config.prior_prob)
+                beam_width = config["beam_width"]
+                beam_random_context = tf.random.normal([beam_width * batch_size, config["noise_size"]])
+                beam_class_prior = tf.distributions.Bernoulli(probs=config["prior_prob"])
                 beam_random_classes = class_prior.sample((beam_width * batch_size, 1))
                 beam_tiled_random_classes = tf.tile(beam_random_classes, [1, class_size]) # Increase the possibility of exposure
                 beam_random_vector = tf.concat([beam_random_context, 
@@ -586,7 +566,7 @@ def main(config = None):
             fake_inp = fake_inp[:, :max_length, :]
             gen_lengths = tf.clip_by_value(gen_lengths, 0, tf.shape(fake_inp)[1])
 
-            if config.add_sentence_progress:
+            if config["add_sentence_progress"]:
                 f_progress_vector = tf.ones_like(fake_inp)
                 # Array of  [batch_size, tstep, 1] like 
                 #  [[1, 2, 3, 4...]
@@ -696,18 +676,18 @@ def main(config = None):
             r_disc_loss = tf.losses.sigmoid_cross_entropy(
                 logits = r_disc_score,
                 multi_class_labels=true_labs, 
-                label_smoothing = config.disc_label_smoothing_epsilon,
+                label_smoothing = config["disc_label_smoothing_epsilon"],
                 reduction=tf.losses.Reduction.MEAN)
             f_disc_loss = tf.losses.sigmoid_cross_entropy(
                 logits=f_disc_score,
                 multi_class_labels=fake_labs, 
-                label_smoothing = config.disc_label_smoothing_epsilon,
+                label_smoothing = config["disc_label_smoothing_epsilon"],
                 reduction=tf.losses.Reduction.MEAN)
             disc_loss = r_disc_loss + f_disc_loss
             #disc_loss.set_shape(())
             disc_loss.set_shape(disc_loss.shape)
-#             if config.let_discriminator_train_embedder:
-            if config.disc_has_own_embedder:
+#             if config["let_discriminator_train_embedder:
+            if config["disc_has_own_embedder"]:
                 d_variables = tx.utils.collect_trainable_variables([discriminator,
                                                                     discriminator.word_embedder,
                                                                     discriminator.position_embedder])
@@ -716,7 +696,7 @@ def main(config = None):
                                                                     emb_model.word_embedder,
                                                                     emb_model.position_embedder])
                 
-            disc_optimizer = tx.core.get_optimizer(hparams=config.d_opt_hparams)
+            disc_optimizer = tx.core.get_optimizer(hparams=config["d_opt_hparams"])
 
             disc_train_op = disc_optimizer.minimize(disc_loss,
                                                     var_list=d_variables)
@@ -744,11 +724,11 @@ def main(config = None):
                                                           predictions=f_disc_crit_baselines,
                                                            reduction=tf.losses.Reduction.MEAN)
 
-            if config.disc_crit_train_on_fake_only:
+            if config["disc_crit_train_on_fake_only"]:
                 disc_crit_loss = f_disc_crit_loss
             else:
                 disc_crit_loss = r_disc_crit_loss + f_disc_crit_loss
-            disc_crit_optimizer = tx.core.get_optimizer(hparams=config.d_crit_opt_hparams)
+            disc_crit_optimizer = tx.core.get_optimizer(hparams=config["d_crit_opt_hparams"])
             disc_crit_train_op = disc_crit_optimizer.minimize(disc_crit_loss,
                                                      var_list=[disc_crit.trainable_variables,
                                                                init_pred])
@@ -777,7 +757,7 @@ def main(config = None):
             tf.summary.scalar('mean_f_prob', mean_f_prob)
             tf.summary.scalar('f_disc_crit_rmse', f_disc_crit_rmse)
             tf.summary.scalar('mean_f_disc_crit_baselines', mean_f_disc_crit_baselines)
-            if not config.disc_crit_train_on_fake_only:
+            if not config["disc_crit_train_on_fake_only"]:
                 tf.summary.scalar('r_disc_crit_rmse', r_disc_crit_rmse)
                 tf.summary.scalar('mean_r_disc_crit_baselines',mean_r_disc_crit_baselines)
             
@@ -882,22 +862,22 @@ def main(config = None):
                 logits=f_clas_score, 
                 multi_class_labels=random_class_labels,
                 reduction=tf.losses.Reduction.MEAN)
-            if  config.clas_loss_on_fake_lambda > 0 :
+            if  config["clas_loss_on_fake_lambda"] > 0 :
                 clas_loss =  tf.cond(clas_use_fake_data,
-                                     lambda : r_clas_loss + config.clas_loss_on_fake_lambda * f_clas_loss,
+                                     lambda : r_clas_loss + config["clas_loss_on_fake_lambda"] * f_clas_loss,
                                      lambda : r_clas_loss)
 
             else:
                 clas_loss = r_clas_loss
             
-            if config.clas_min_ent_lambda > 0 :
+            if config["clas_min_ent_lambda"] > 0 :
                 # binary entropy
                 ent = tf.multiply(-tf.nn.sigmoid(f_clas_score), tf.log(tf.nn.sigmoid(f_clas_score)+ 1e-8)) -\
                         tf.multiply(1 - tf.nn.sigmoid(f_clas_score), 
                                     tf.log(1 - tf.nn.sigmoid(f_clas_score) + 1e-8))
                 f_clas_ent = tf.reduce_mean(ent)
                 clas_loss = tf.cond(clas_use_fake_data,
-                                    lambda: clas_loss + config.clas_min_ent_lambda * f_clas_ent,
+                                    lambda: clas_loss + config["clas_min_ent_lambda"] * f_clas_ent,
                                     lambda :clas_loss)
 
 
@@ -905,7 +885,7 @@ def main(config = None):
             #clas_loss.set_shape(())
             clas_loss.set_shape(clas_loss.shape)
 
-            if config.clas_has_own_embedder:
+            if config["clas_has_own_embedder"]:
                 c_variables = tx.utils.collect_trainable_variables([classifier,
                                                                     classifier.word_embedder,
                                                                     classifier.position_embedder])
@@ -914,7 +894,7 @@ def main(config = None):
                                                                     emb_model.word_embedder,
                                                                     emb_model.position_embedder])
                 
-            clas_optimizer = tx.core.get_optimizer(hparams=config.c_opt_hparams)
+            clas_optimizer = tx.core.get_optimizer(hparams=config["c_opt_hparams"])
             clas_train_op = clas_optimizer.minimize(clas_loss,
                                                     var_list=c_variables)
             # Classifier critic
@@ -940,12 +920,12 @@ def main(config = None):
             f_clas_crit_loss = tf.losses.mean_squared_error(labels=f_clas_crit_target,
                                                           predictions=f_clas_crit_baselines,
                                                            reduction=tf.losses.Reduction.MEAN)
-            if config.clas_crit_train_on_fake_only:
+            if config["clas_crit_train_on_fake_only"]:
                 clas_crit_loss = f_clas_crit_loss
             else:
                 clas_crit_loss = r_clas_crit_loss + f_clas_crit_loss
 
-            clas_crit_optimizer = tx.core.get_optimizer(hparams=config.c_crit_opt_hparams)
+            clas_crit_optimizer = tx.core.get_optimizer(hparams=config["c_crit_opt_hparams"])
             clas_crit_train_op = clas_crit_optimizer.minimize(clas_crit_loss,
                                                               var_list=[clas_crit.trainable_variables,
                                                                        init_clas_pred])
@@ -1029,10 +1009,10 @@ def main(config = None):
             tf.summary.scalar('clas_crit_rmse', clas_crit_rmse)
             tf.summary.scalar('f_clas_crit_rmse',  f_clas_crit_rmse)
             tf.summary.scalar('mean_f_clas_crit_baselines', mean_f_clas_crit_baselines)
-            if not config.clas_crit_train_on_fake_only:
+            if not config["clas_crit_train_on_fake_only"]:
                 tf.summary.scalar('r_clas_crit_rmse', r_clas_crit_rmse)
                 tf.summary.scalar('mean_r_clas_crit_baselines',mean_r_clas_crit_baselines)
-            if config.clas_min_ent_lambda >0:
+            if config["clas_min_ent_lambda"] >0:
                 tf.summary.scalar('clas_min_ent', f_clas_ent)
             clas_summaries = tf.summary.merge_all(scope='clas_train')
             
@@ -1061,7 +1041,7 @@ def main(config = None):
                                                                            labels=gen_sample_ids)
             
             # Note the negation here.
-            log_probs = -tf.clip_by_value(log_probs, config.min_log_prob, config.max_log_prob)
+            log_probs = -tf.clip_by_value(log_probs, config["min_log_prob"], config["max_log_prob"])
 
             # Critic baselines
             disc_baseline = f_disc_crit_baselines
@@ -1079,30 +1059,30 @@ def main(config = None):
                                      -clas_baseline) # random class is 0
                                      
 
-            if config.classifier_loss_lambda >0 and config.reward_blending == 'additive':
-                rewards = config.discriminator_loss_lambda * tf.nn.sigmoid(disc_rewards) +\
-                        config.classifier_loss_lambda * tf.nn.sigmoid(clas_rewards)
-                advantages = (config.discriminator_loss_lambda *
+            if config["classifier_loss_lambda"] >0 and config["reward_blending"] == 'additive':
+                rewards = config["discriminator_loss_lambda"] * tf.nn.sigmoid(disc_rewards) +\
+                        config["classifier_loss_lambda"] * tf.nn.sigmoid(clas_rewards)
+                advantages = (config["discriminator_loss_lambda"] *
                     (tf.nn.sigmoid(disc_rewards) - tf.nn.sigmoid(disc_baseline))) +\
-                    config.classifier_loss_lambda * (tf.nn.sigmoid(clas_rewards) - tf.nn.sigmoid(clas_baseline))
+                    config["classifier_loss_lambda"] * (tf.nn.sigmoid(clas_rewards) - tf.nn.sigmoid(clas_baseline))
             else:
                 rewards = tf.nn.sigmoid(disc_rewards)
                 advantages = rewards - tf.nn.sigmoid(disc_baseline)
             
-            if config.reward_blending == 'f1':
-                rewards = 2 *tf.multiply(config.discriminator_loss_lambda * tf.nn.sigmoid(disc_rewards),
-                                      config.classifier_loss_lambda * tf.nn.sigmoid(clas_rewards))
-                rewards = tf.divide(rewards, (config.discriminator_loss_lambda * tf.nn.sigmoid(disc_rewards) + 
-                                              config.classifier_loss_lambda * tf.nn.sigmoid(clas_rewards)))
-                baseline = 2 * tf.multiply(config.discriminator_loss_lambda * tf.nn.sigmoid(disc_baseline),
-                                       config.classifier_loss_lambda * tf.nn.sigmoid(clas_baseline))
-                baseline = tf.divide(baseline, (config.discriminator_loss_lambda * tf.nn.sigmoid(disc_baseline) + 
-                                                config.classifier_loss_lambda *  tf.nn.sigmoid(clas_baseline)))
+            if config["reward_blending"] == 'f1':
+                rewards = 2 *tf.multiply(config["discriminator_loss_lambda"] * tf.nn.sigmoid(disc_rewards),
+                                      config["classifier_loss_lambda"] * tf.nn.sigmoid(clas_rewards))
+                rewards = tf.divide(rewards, (config["discriminator_loss_lambda"] * tf.nn.sigmoid(disc_rewards) + 
+                                              config["classifier_loss_lambda"] * tf.nn.sigmoid(clas_rewards)))
+                baseline = 2 * tf.multiply(config["discriminator_loss_lambda"] * tf.nn.sigmoid(disc_baseline),
+                                       config["classifier_loss_lambda"] * tf.nn.sigmoid(clas_baseline))
+                baseline = tf.divide(baseline, (config["discriminator_loss_lambda"] * tf.nn.sigmoid(disc_baseline) + 
+                                                config["classifier_loss_lambda"] *  tf.nn.sigmoid(clas_baseline)))
                 advantages = rewards - baseline
             
             
             advantages = tf.squeeze(advantages)
-            if config.linear_decay_pg_weights:
+            if config["linear_decay_pg_weights"]:
                 steps = tf.reshape(
                     tf.tile(
                         tf.range(0.0, tf.cast(tf.shape(advantages)[1], dtype=tf.float32), dtype=tf.float32),
@@ -1113,14 +1093,14 @@ def main(config = None):
                 advantages = tf.multiply(advantages, alpha)
     
             
-            if config.norm_advantages:
+            if config["norm_advantages"]:
                 advantages = tx.losses.discount_reward(advantages, 
                                                        sequence_length=gen_lengths,
                                                        discount=0,
                                                        normalize=True,
                                                        tensor_rank=2)
             
-            advantages = tf.clip_by_value(advantages, -config.adv_max_clip, config.adv_max_clip)
+            advantages = tf.clip_by_value(advantages, -config["adv_max_clip"], config["adv_max_clip"])
 
             
             pg_loss_full = tx.losses.pg_loss_with_log_probs(
@@ -1149,7 +1129,7 @@ def main(config = None):
             pg_loss.set_shape((pg_loss.shape))
 #             pg_variables = tx.utils.collect_trainable_variables([g_decoder, embedder])
 
-            if config.is_gpt2_trainable == True:
+            if config["is_gpt2_trainable"] is True:
                 pg_variables = tx.utils.collect_trainable_variables([g_decoder,
                                                                      g_decoder.word_embedder,
                                                                      g_decoder.position_embedder])
@@ -1158,7 +1138,7 @@ def main(config = None):
                 
             
             pg_optimizer = tx.core.get_optimizer(global_step=global_step,
-                                                 hparams=config.g_opt_pg_hparams)
+                                                 hparams=config["g_opt_pg_hparams"])
             pg_train_op = pg_optimizer.minimize(pg_loss,
                                                 global_step=global_step,
                                                 var_list=pg_variables)
@@ -1248,8 +1228,8 @@ def main(config = None):
         total_loss = 0
         gen_step = 0
         total_runtime = 0
-        if config.log_verbose_mle or config.log_verbose_rl:
-            fl = fakelogger('{}/logs.txt'.format(config.log_dir))
+        if config["log_verbose_mle"] or config["log_verbose_rl"]:
+            fl = fakelogger('{}/logs.txt'.format(config["log_dir"]))
         while True:
             try:
                 log_mle = False
@@ -1265,9 +1245,9 @@ def main(config = None):
                         'summaries' : mle_summaries,
 
                     }
-                    if  gen_step % config.batches_per_summary == 0:
+                    if  gen_step % config["batches_per_summary"] == 0:
                         fetches['summaries'] = mle_summaries
-                    if gen_step % config.batches_per_text_summary == 0 and config.log_verbose_mle:
+                    if gen_step % config["batches_per_text_summary"] == 0 and config["log_verbose_mle"]:
                         log_mle = True
                         fetches['sentence'] = y_sl
                         fetches['logits'] = observed_logits_sl
@@ -1285,9 +1265,9 @@ def main(config = None):
                         'train_op' : pg_train_op,
                         'global_step' : global_step,
                     }
-                    if  gen_step % config.batches_per_summary == 0:
+                    if  gen_step % config["batches_per_summary"] == 0:
                         fetches['summaries'] = pg_summaries
-                    if gen_step % config.batches_per_text_summary == 0 and config.log_verbose_rl:
+                    if gen_step % config["batches_per_text_summary"] == 0 and config["log_verbose_rl"]:
                         log_rl = True
                         fetches['sentence'] = gen_sample_ids_sl
                         fetches['logits'] = observed_gen_logits_sl
@@ -1309,7 +1289,7 @@ def main(config = None):
                         'summaries' : val_mle_summaries,
                         'perplexity' : perplexity
                     }
-                    if  gen_step % config.batches_per_summary == 0:
+                    if  gen_step % config["batches_per_summary"] == 0:
                         fetches['summaries'] = val_mle_summaries
                     if  mode_string == 'test':
                         fetches['gen_sentences'] = gen_sample_ids
@@ -1332,22 +1312,22 @@ def main(config = None):
                 loss = rtns['loss']
                 bs = rtns['batch_size']
                 # Summaries
-                if gen_step % config.batches_per_summary == 0:
+                if gen_step % config["batches_per_summary"] == 0:
                     writer.add_summary(rtns['summaries'], glob_step)
-                if gen_step % config.batches_per_text_summary == 0:
+                if gen_step % config["batches_per_text_summary"] == 0:
                     writer.add_summary(sess.run(sample_text_summary, 
                                                 {generator_dropout : tf.estimator.ModeKeys.EVAL,
                                                  use_unsup : True}), glob_step)
                     writer.add_summary(sess.run(original_text_summary, {use_unsup : True}), glob_step)
                     # Write verbose Summaries
-                    if mode_string == 'pretrain' and config.log_verbose_mle:
+                    if mode_string == 'pretrain' and config["log_verbose_mle"]:
                         header = ['tkn', 'logit', 'crossent']
                         values = [list(vocab.map_ids_to_tokens_py(rtns['sentence'])), 
                                   rtns['logits'].tolist(),
                                   rtns['full_cross_ent'].tolist()]
                         final_line = 'True class: {}'.format(rtns['class'].tolist())
                         print_out_array(header, values, fl, final_line)
-                    if mode_string == 'train' and config.log_verbose_rl:
+                    if mode_string == 'train' and config["log_verbose_rl"]:
                         header = ['tkn', 'logit', 'log_prob', 'Q_d', 'Q_c', 'V_d',
                                   'V_c', 'Q', 'A', 'pgloss']
                         values = [list(vocab.map_ids_to_tokens_py(rtns['sentence'])),
@@ -1389,7 +1369,7 @@ def main(config = None):
                                           ('batch_time', per_step_time), 
                                           ("total_runtime", total_runtime)]) 
 
-                if mode_string == 'train' and nexamples > config.adv_train_max_gen_examples:
+                if mode_string == 'train' and nexamples > config["adv_train_max_gen_examples"]:
                     break
             except tf.errors.OutOfRangeError:
                 trying_unsup=False
@@ -1417,8 +1397,8 @@ def main(config = None):
             unsup_iterator.switch_to_test_data(sess)
             modekey = tf.estimator.ModeKeys.EVAL
             size = get_size(test_data)
-        if config.log_verbose_mle or config.log_verbose_rl:
-            fl = fakelogger('{}/logs.txt'.format(config.log_dir))
+        if config["log_verbose_mle"] or config["log_verbose_rl"]:
+            fl = fakelogger('{}/logs.txt'.format(config["log_dir"]))
 
         nexamples = 0.01
         total_loss = 0
@@ -1439,9 +1419,9 @@ def main(config = None):
                         'global_step' : global_step,
                         'batch_size' : batch_size,
                     }
-                    if disc_step % config.batches_per_summary == 0:
+                    if disc_step % config["batches_per_summary"] == 0:
                         fetches['summaries'] = disc_summaries
-                    if disc_step % config.batches_per_text_summary == 0:
+                    if disc_step % config["batches_per_text_summary"] == 0:
                         fetches['fake_sentence'] = fake_seq_sl
                         fetches['real_sentence'] = real_seq_sl
                         fetches['r_disc_q_logit'] = r_disc_q_logit_sl
@@ -1462,7 +1442,7 @@ def main(config = None):
                         'batch_size' : batch_size,
                         'global_step' : global_step,
                     }
-                    if disc_step % config.batches_per_summary == 0:
+                    if disc_step % config["batches_per_summary"] == 0:
                         fetches['summaries'] = disc_val_summaries
                 if mode_string == 'train_critic':
                     fetches = {
@@ -1474,7 +1454,7 @@ def main(config = None):
                         'global_step' : global_step,
                         'batch_size' : batch_size
                     }
-                    if disc_step % config.batches_per_summary == 0:
+                    if disc_step % config["batches_per_summary"] == 0:
                         fetches['summaries'] = disc_summaries
 
                 if mode_string == 'train' or mode_string == 'pretrain':
@@ -1495,10 +1475,10 @@ def main(config = None):
                 acc = rtns['disc_acc']
                 bs = rtns['batch_size']
 
-                if disc_step % config.batches_per_summary == 0:
+                if disc_step % config["batches_per_summary"] == 0:
                     writer.add_summary(
                         rtns['summaries'], disc_step)
-                if disc_step % config.batches_per_text_summary == 0 and mode_string=='train':
+                if disc_step % config["batches_per_text_summary"] == 0 and mode_string=='train':
                     r_header = ['tkn', 'logit', 'v_d']
                     f_header = ['tkn', 'logit', 'v_d']
                     r_values = [list(vocab.map_ids_to_tokens_py(rtns['real_sentence'])),
@@ -1518,7 +1498,7 @@ def main(config = None):
                     fl.debug('FAKE SENTENCE')
                     print_out_array(f_header, f_values, fl, f_final_line)
 
-                if config.adv_disc_max_ex is not None and nexamples > config.adv_disc_max_ex:
+                if config["adv_disc_max_ex"] is not None and nexamples > config["adv_disc_max_ex"]:
                     break
 
                 disc_step += 1
@@ -1580,8 +1560,8 @@ def main(config = None):
         progbar = tf.keras.utils.Progbar(size, 30, 1, 0.05)
         previous_acc = 0
         
-        if config.log_verbose_mle or config.log_verbose_rl:
-            fl = fakelogger('{}/logs.txt'.format(config.log_dir))
+        if config["log_verbose_mle"] or config["log_verbose_rl"]:
+            fl = fakelogger('{}/logs.txt'.format(config["log_dir"]))
         while True:
             try:
                 clas_step += 1
@@ -1596,9 +1576,9 @@ def main(config = None):
                         'batch_size' : label_batch_size,
                         'global_step' : global_step,
                     }
-                    if  clas_step % config.batches_per_summary == 0:
+                    if  clas_step % config["batches_per_summary"] == 0:
                         fetches['summaries'] = clas_summaries
-                    if clas_step % config.batches_per_text_summary == 0:
+                    if clas_step % config["batches_per_text_summary"] == 0:
                         fetches['real_sentence'] = real_label_inp_sl
                         fetches['r_clas_q_logit'] = r_clas_q_logit_sl
                         fetches['r_clas_score'] = r_clas_score_sl
@@ -1619,9 +1599,9 @@ def main(config = None):
                         'batch_size' : label_batch_size,
                         'global_step' : global_step,
                     }
-                    if  clas_step % config.batches_per_summary == 0:
+                    if  clas_step % config["batches_per_summary"] == 0:
                         fetches['summaries'] = clas_summaries
-                    if clas_step % config.batches_per_text_summary == 0:
+                    if clas_step % config["batches_per_text_summary"] == 0:
                         fetches['fake_sentence'] = fake_seq_sl
                         fetches['real_sentence'] = real_label_inp_sl
                         fetches['r_clas_q_logit'] = r_clas_q_logit_sl
@@ -1652,7 +1632,7 @@ def main(config = None):
                         "r_fn": r_fn,
                         "f_fn": f_fn,
                     }
-                    if  clas_step % config.batches_per_summary == 0:
+                    if  clas_step % config["batches_per_summary"] == 0:
                         fetches['summaries'] = val_clas_summaries
 
                 if mode_string == 'test':
@@ -1720,10 +1700,10 @@ def main(config = None):
                 if mode_string != 'pretrain':
                     f_acc = rtns['f_clas_acc']
 
-                if  clas_step % config.batches_per_summary == 0:
+                if  clas_step % config["batches_per_summary"] == 0:
                     writer.add_summary(
                         rtns['summaries'], clas_step)
-                if clas_step % config.batches_per_text_summary == 0 and mode_string == 'pretrain':
+                if clas_step % config["batches_per_text_summary"] == 0 and mode_string == 'pretrain':
                     r_header = ['tkn', 'logit', 'V_c']
                     r_values = [list(vocab.map_ids_to_tokens_py(rtns['real_sentence'])),
                                 rtns['r_clas_q_logit'].squeeze().tolist(),
@@ -1736,7 +1716,7 @@ def main(config = None):
 
 
 
-                if clas_step % config.batches_per_text_summary == 0 and mode_string == 'train' :
+                if clas_step % config["batches_per_text_summary"] == 0 and mode_string == 'train' :
                     r_header = ['tkn', 'logit']
                     f_header = ['tkn', 'logit', 'V_c']
                     r_values = [list(vocab.map_ids_to_tokens_py(rtns['real_sentence'])),
@@ -1755,7 +1735,7 @@ def main(config = None):
                     fl.debug('FAKE SENTENCE')
                     print_out_array(f_header, f_values, fl, f_final_line)
 
-                if clas_step % config.batches_per_text_summary == 0 and mode_string == 'pretrain':
+                if clas_step % config["batches_per_text_summary"] == 0 and mode_string == 'pretrain':
                     r_header = ['tkn', 'logit']
                     f_header = ['tkn', 'logit', 'V_c']
                     r_values = [list(vocab.map_ids_to_tokens_py(rtns['real_sentence'])),
@@ -1891,102 +1871,86 @@ def main(config = None):
         logger.info("Beginning data flow...")
 
         # Checkpoints
-        checkpoint_dir = os.path.abspath(config.checkpoint_dir)
-        checkpoint_file = config.load_checkpoint_file
+        checkpoint_dir = os.path.abspath(config["checkpoint_dir"])
+        checkpoint_file = config["load_checkpoint_file"]
         checkpoint = tf.train.Saver()
-        if config.restore_model:
+        if config["restore_model"]:
             checkpoint.restore(sess, checkpoint_file)
             logger.info("Checkpoint restored from {}".format(checkpoint_file))
 
-        if config.clear_run_logs:
-            logfiles = os.listdir(config.log_dir)
-            [os.unlink(os.path.join(config.log_dir, f)) for f in logfiles]
+        if config["clear_run_logs"]:
+            logfiles = os.listdir(config["log_dir"])
+            [os.unlink(os.path.join(config["log_dir"], f)) for f in logfiles]
 
 
         # Summaries
-        sum_writer = tf.summary.FileWriter(config.log_dir,graph=g, session=sess, flush_secs=30)
+        sum_writer = tf.summary.FileWriter(config["log_dir"],graph=g, session=sess, flush_secs=30)
         with sum_writer:
             # Check if testing
-#             if config.clas_test:
-#                 checkpoint.restore(sess, config.clas_test_ckpt)
+#             if config["clas_test:
+#                 checkpoint.restore(sess, config["clas_test_ckpt)
 #                 outs = clas_run_epoch(sess, 'test', sum_writer, 0)
 #                 logger.info(outs)
-#                 with open(config.clas_pred_output, 'w') as f:
+#                 with open(config["clas_pred_output, 'w') as f:
 #                     for p in outs['r_clas_preds']:
 #                         f.write(str(round(p)) + '\n')
 #                 return
-#             if config.gen_test is not None and config.gen_test:
-#                 checkpoint.restore(sess, config.clas_test_ckpt)
+#             if config["gen_test is not None and config["gen_test:
+#                 checkpoint.restore(sess, config["clas_test_ckpt)
 #                 outs = gen_run_epoch(sess, 'test', sum_writer, False)
 #                 print(outs)
 # #                 with open('../../perplexities.txt', 'a') as f:
-#                 with open(config.gen_perp_output, 'a') as f:
+#                 with open(config["gen_perp_output, 'a') as f:
 #                     f.write(os.getcwd() + '\n')
 #                     f.write(str(outs['perp']) + '\n')
 #                 return
- 
-#             if config.gen_clas_test is not None and config.gen_clas_test:
-#                 dict_all_res = {}
-#                 dict_bestclas_acc_res = {}
-#                 dict_bestclas_f1_res = {}
-#                 dict_bestclas_mixed_res = {}
-#                 
-#                 for ckpt in config.clas_test_ckpts:
-#                     logger.info("\nRestoring {}: ".format(ckpt))
-#                     checkpoint.restore(sess, ckpt)
-#                     
-#                     logger.info("\nTest Classifier: \n")
-#                     clas_test_outputs = clas_run_epoch(sess, "test", sum_writer, 0)
-#                     logger.info("\nClassifier test result: \n{}".format(clas_test_outputs))
-#                     with open(config.clas_pred_output, 'w') as f:
-#                         for p in clas_test_outputs['r_clas_preds']:
-#                             f.write(str(round(p)) + '\n')
-#                     
-#                     logger.info("\nTest Generator: \n")
-#                     gen_test_outputs = gen_run_epoch(sess, 'test', sum_writer, False)
-#                     logger.info("\nGenerator test result: \n{}".format(gen_test_outputs))
-#                     with open(config.gen_perp_output, 'a') as f:
-#                         f.write(os.getcwd() + '\n')
-#                         f.write(str(gen_test_outputs['perp']) + '\n')
-#                         
-#                     if "ckpt-all" in ckpt:
-#                         dict_all_res["accuracy"] = clas_test_outputs["real_acc"]
-#                         dict_all_res["f1 score"] = clas_test_outputs["real_f1"]
-#                         dict_all_res["perplexity"] = gen_test_outputs["perp"]
-#                     elif "ckpt-bestclas-acc" in ckpt:
-#                         dict_bestclas_acc_res["accuracy"] = clas_test_outputs["real_acc"]
-#                         dict_bestclas_acc_res["f1 score"] = clas_test_outputs["real_f1"]
-#                         dict_bestclas_acc_res["perplexity"] = gen_test_outputs["perp"]
-#                     elif "ckpt-bestclas-f1" in ckpt:
-#                         dict_bestclas_f1_res["accuracy"] = clas_test_outputs["real_acc"]
-#                         dict_bestclas_f1_res["f1 score"] = clas_test_outputs["real_f1"]
-#                         dict_bestclas_f1_res["perplexity"] = gen_test_outputs["perp"]
-#                     elif "ckpt-bestclas-mixed" in ckpt:
-#                         dict_bestclas_mixed_res["accuracy"] = clas_test_outputs["real_acc"]
-#                         dict_bestclas_mixed_res["f1 score"] = clas_test_outputs["real_f1"]
-#                         dict_bestclas_mixed_res["perplexity"] = gen_test_outputs["perp"]
-#                     
-#                 return dict_all_res, dict_bestclas_acc_res, dict_bestclas_f1_res, dict_bestclas_mixed_res
-            
-            if config.gen_clas_test is not None and config.gen_clas_test:
-                for ckpt in config.clas_test_ckpts:
+            if config["gen_clas_test"] is not None and config["gen_clas_test"]:
+                dict_all_res = {}
+                dict_bestclas_pretrain_res = {}
+                dict_bestclas_acc_res = {}
+                dict_bestclas_f1_res = {}
+                dict_bestclas_mixed_res = {}
+                
+                for ckpt in config["clas_test_ckpts"]:
                     logger.info("\nRestoring {}: ".format(ckpt))
-                    checkpoint.restore(sess, ckpt)
+                    checkpoint.restore(sess, os.path.join(config["checkpoint_dir"], ckpt))
                     
                     logger.info("\nTest Classifier: \n")
                     clas_test_outputs = clas_run_epoch(sess, "test", sum_writer, 0)
                     logger.info("\nClassifier test result: \n{}".format(clas_test_outputs))
-                    with open(config.clas_pred_output, 'w') as f:
+                    with open(os.path.join(config["checkpoint_dir"], config["clas_pred_output"]), 'w') as f:
                         for p in clas_test_outputs['r_clas_preds']:
                             f.write(str(round(p)) + '\n')
                     
                     logger.info("\nTest Generator: \n")
                     gen_test_outputs = gen_run_epoch(sess, 'test', sum_writer, False)
                     logger.info("\nGenerator test result: \n{}".format(gen_test_outputs))
-                    with open(config.gen_perp_output, 'a') as f:
+                    with open(os.path.join(config["checkpoint_dir"], config["gen_perp_output"]), 'a') as f:
                         f.write(os.getcwd() + '\n')
                         f.write(str(gen_test_outputs['perp']) + '\n')
-                return
+                        
+                    if "ckpt-all" in ckpt:
+                        dict_all_res["accuracy"] = clas_test_outputs["real_acc"]
+                        dict_all_res["f1 score"] = clas_test_outputs["real_f1"]
+                        dict_all_res["perplexity"] = gen_test_outputs["perp"]
+                    elif "ckpt-bestclas-pretrain" in ckpt:
+                        dict_bestclas_pretrain_res["accuracy"] = clas_test_outputs["real_acc"]
+                        dict_bestclas_pretrain_res["f1 score"] = clas_test_outputs["real_f1"]
+                        dict_bestclas_pretrain_res["perplexity"] = gen_test_outputs["perp"]
+                    elif "ckpt-bestclas-acc" in ckpt:
+                        dict_bestclas_acc_res["accuracy"] = clas_test_outputs["real_acc"]
+                        dict_bestclas_acc_res["f1 score"] = clas_test_outputs["real_f1"]
+                        dict_bestclas_acc_res["perplexity"] = gen_test_outputs["perp"]
+                    elif "ckpt-bestclas-f1" in ckpt:
+                        dict_bestclas_f1_res["accuracy"] = clas_test_outputs["real_acc"]
+                        dict_bestclas_f1_res["f1 score"] = clas_test_outputs["real_f1"]
+                        dict_bestclas_f1_res["perplexity"] = gen_test_outputs["perp"]
+                    elif "ckpt-bestclas-mixed" in ckpt:
+                        dict_bestclas_mixed_res["accuracy"] = clas_test_outputs["real_acc"]
+                        dict_bestclas_mixed_res["f1 score"] = clas_test_outputs["real_f1"]
+                        dict_bestclas_mixed_res["perplexity"] = gen_test_outputs["perp"]
+                    
+                return dict_all_res, dict_bestclas_pretrain_res, dict_bestclas_acc_res, dict_bestclas_f1_res, dict_bestclas_mixed_res
             
 
             g.finalize()
@@ -2004,10 +1968,10 @@ def main(config = None):
             clas_adv_time = 0
             test_time = 0
             
-            for e in range(config.g_pretrain_epochs):
+            for e in range(config["g_pretrain_epochs"]):
                 logger.info('\nGen Pretrain Epoch {}'.format(e))
-#                 if config.g_unlab_every_n > 0:
-#                     train_with_unsup = e % config.g_unlab_every_n == 0
+#                 if config["g_unlab_every_n > 0:
+#                     train_with_unsup = e % config["g_unlab_every_n == 0
 #                 else:
 #                     train_with_unsup = False
                 train_with_unsup = True
@@ -2019,17 +1983,17 @@ def main(config = None):
                 total_runtime = total_runtime + gen_rtns["total_runtime"]
                 gen_pretrain_time = gen_pretrain_time + gen_rtns["total_runtime"]
                 logger.info('\nGen Val loss:{}'.format(gen_rtns['loss']))
-                if not config.gen_patience <= 0:
+                if not config["gen_patience"] <= 0:
                     checkpoint.save(sess, os.path.join(checkpoint_dir, 'ckpt-all'))
 
-                if gen_rtns['loss'] < (min_gen_val_loss - config.gen_es_tolerance):
+                if gen_rtns['loss'] < (min_gen_val_loss - config["gen_es_tolerance"]):
                     min_gen_val_loss = gen_rtns['loss']
                     patience = 0
                     checkpoint.save(sess, os.path.join(checkpoint_dir, 'ckpt-all'))
                 else:
                     patience += 1
                
-                if patience > config.gen_patience:
+                if patience > config["gen_patience"]:
                     logger.info("\nGen Early Stopping Reached at val loss {:0.02f}".format(
                         min_gen_val_loss))
                     break
@@ -2040,10 +2004,10 @@ def main(config = None):
             patience = 0
             # Disc Pretraining
             logger.info("\nStarting discriminator pretraining...")
-            if config.disc_has_own_embedder and False:
+            if config["disc_has_own_embedder"] and False:
                 sess.run(copy_embedder_weights)
             disc_rtns = {'step' : 0}
-            for e in range(config.d_pretrain_epochs):
+            for e in range(config["d_pretrain_epochs"]):
                 logger.info('\nDisc Pretrain Epoch {} '.format(e))
                 disc_rtns = disc_run_epoch(
                     sess, 'train', sum_writer, disc_rtns['step'])
@@ -2055,16 +2019,16 @@ def main(config = None):
                 total_runtime = total_runtime + disc_rtns["total_runtime"]
                 disc_pretrain_time = disc_pretrain_time + disc_rtns["total_runtime"]
                 
-                if not config.disc_patience <= 0:
+                if not config["disc_patience"] <= 0:
                     checkpoint.save(sess, os.path.join(checkpoint_dir, 'ckpt-all-base'))
-                if disc_rtns['loss'] < (min_disc_val_loss - config.disc_es_tolerance):
+                if disc_rtns['loss'] < (min_disc_val_loss - config["disc_es_tolerance"]):
                     min_disc_val_loss = disc_rtns['loss']
                     patience = 0
                     checkpoint.save(sess, os.path.join(checkpoint_dir, 'ckpt-all'))
                 else:
                     patience += 1
                
-                if patience > config.disc_patience:
+                if patience > config["disc_patience"]:
                     logger.info("\nDisc Early Stopping Reached at val loss {:0.02f}".format(
                         min_disc_val_loss))
                     break
@@ -2072,23 +2036,23 @@ def main(config = None):
             min_disc_crit_val_loss = 1e8
             patience = 0   
             logger.info('\nDiscriminator critic pretraining...')
-            for e in range(config.d_pretrain_critic_epochs):
+            for e in range(config["d_pretrain_critic_epochs"]):
                 logger.info('\nDisc-Crit Pretrain Epoch {}'.format(e))
                 disc_rtns = disc_run_epoch(
                     sess, 'train_critic', sum_writer, disc_rtns['step'])
                 total_runtime = total_runtime + disc_rtns["total_runtime"]
                 disc_pretrain_time = disc_pretrain_time + disc_rtns["total_runtime"]
                 
-                if not config.disc_patience <= 0:
+                if not config["disc_patience"] <= 0:
                     checkpoint.save(sess, os.path.join(checkpoint_dir, 'ckpt-all-base'))
-                if disc_rtns['loss'] < (min_disc_crit_val_loss - config.disc_es_tolerance):
+                if disc_rtns['loss'] < (min_disc_crit_val_loss - config["disc_es_tolerance"]):
                     min_disc_crit_val_loss = disc_rtns['loss']
                     patience = 0
                     checkpoint.save(sess, os.path.join(checkpoint_dir, 'ckpt-all'))
                 else:
                     patience += 1
                
-                if patience > config.disc_patience:
+                if patience > config["disc_patience"]:
                     logger.info("\nDisc Early Stopping Reached at val loss {:0.02f}".format(
                         min_disc_crit_val_loss))
                     break
@@ -2101,9 +2065,9 @@ def main(config = None):
             min_loss = 1e8
             patience = 0
             clas_rtns = {'step' : 0, 'real_acc': 0}
-            if config.clas_has_own_embedder and False:
+            if config["clas_has_own_embedder"] and False:
                 sess.run(clas_copy_embedder_weights)
-            for e in range(config.c_pretrain_epochs):
+            for e in range(config["c_pretrain_epochs"]):
                 logger.info('\nClas Pretrain Epoch {}'.format(e))
                 clas_rtns = clas_run_epoch(sess, 'pretrain', sum_writer, clas_rtns['step'])
                 total_runtime = total_runtime + clas_rtns["total_runtime"]
@@ -2130,23 +2094,24 @@ def main(config = None):
             clas_adv_max_mixed = 0
             breaking_gen_now = True
             
-            for e in range(config.adversarial_epochs):
-                cur_epoch = e + config.g_pretrain_epochs
+            for e in range(config["adversarial_epochs"]):
+#                 cur_epoch = e + config["g_pretrain_epochs"]
+                cur_epoch = e 
                 # Generator Train
                 logger.info('\nGen Adv-Train Epoch {}'.format(cur_epoch))
-                for i in range(config.gen_adv_epoch):
+                for i in range(config["gen_adv_epochs"]):
                     gen_rtns = gen_run_epoch(sess, 'train', sum_writer) 
                     total_runtime = total_runtime + gen_rtns["total_runtime"]
                     gen_adv_time = gen_adv_time + gen_rtns["total_runtime"]
                 logger.info("\nTotal runtime after generator adv-train: {}".format(total_runtime))
-                if config.mle_loss_in_adv:
-                    for i in range(config.gen_mle_adv_epoch): 
-                        if config.g_unlab_every_n_adv > 0:
-                            train_with_unsup = i % config.g_unlab_every_n_adv == 0
+                if config["mle_loss_in_adv"]:
+                    for i in range(config["gen_mle_adv_epochs"]): 
+                        if config["g_unlab_every_n_adv"] > 0:
+                            train_with_unsup = i % config["g_unlab_every_n_adv"] == 0
                         else:
                             train_with_unsup = False
                         logger.info('\nGen Adv-MLE Train Epoch {}'.format(cur_epoch))
-                        gen_rtns = gen_run_epoch(sess, 'pretrain', sum_writer, config.adv_gen_train_with_unsup)
+                        gen_rtns = gen_run_epoch(sess, 'pretrain', sum_writer, config["adv_gen_train_with_unsup"])
                         total_runtime = total_runtime + gen_rtns["total_runtime"]
                         gen_adv_time = gen_adv_time + gen_rtns["total_runtime"]
                         gen_rtns = gen_run_epoch(sess, 'val', sum_writer)
@@ -2156,7 +2121,7 @@ def main(config = None):
                 logger.info("\nTotal runtime after generator mle-train: {}".format(total_runtime))
                 
                 # Check discriminator loss
-                if config.discriminator_loss_lambda > 0:
+                if config["discriminator_loss_lambda"] > 0:
                     logger.info('\nDisc Adv-Valid Epoch {}'.format(cur_epoch))
                     disc_rtns = disc_run_epoch(
                         sess, 'val', sum_writer, disc_rtns['step'])
@@ -2164,7 +2129,7 @@ def main(config = None):
                 
                 # Train Disc
                 disc_e = 0
-                while config.discriminator_loss_lambda > 0 and disc_e < config.disc_adv:
+                while config["discriminator_loss_lambda"] > 0 and disc_e < config["disc_adv_epochs"]:
                     logger.info('\nDisc Adv-Train Epoch: {}+{}'.format(cur_epoch, disc_e))
                     disc_rtns = disc_run_epoch(sess, 'train', sum_writer, disc_rtns['step'])
                     total_runtime = total_runtime + disc_rtns["total_runtime"]
@@ -2182,14 +2147,14 @@ def main(config = None):
                 gen_adv_time = gen_adv_time + gen_rtns["total_runtime"]
 
                 # Check Clas Acc
-                if config.classifier_loss_lambda > 0:
+                if config["classifier_loss_lambda"] > 0:
                     logger.info('\nClas Adv-Val Epoch {}'.format(cur_epoch))
                     clas_rtns = clas_run_epoch(sess, 'val', sum_writer, clas_rtns['step'])
                     total_runtime = total_runtime + clas_rtns["total_runtime"]
                     clas_adv_time = clas_adv_time + clas_rtns["total_runtime"]
                 # Train Clas
                 clas_e = 0
-                while config.classifier_loss_lambda > 0 and clas_e < config.clas_adv: 
+                while config["classifier_loss_lambda"] > 0 and clas_e < config["clas_adv_epochs"]: 
                     logger.info('\nClas Adv-Train Epoch {}+{}'.format(cur_epoch, clas_e))
                     clas_rnts = clas_run_epoch(sess, 'train', sum_writer, clas_rtns['step'])
                     total_runtime = total_runtime + clas_rtns["total_runtime"]
@@ -2251,19 +2216,19 @@ def main(config = None):
 #             cpu_time = timer.GetCounter()
 #             cpu_time = cpu_time/1000.0
 #             logger.info("Total CPU time: {} s".format(cpu_time))
-#             
-#             dict_time_res = {
-#                 "GPU_train_time" : round(total_runtime, 2),
-#                 "gen_pretrain_time": round(gen_pretrain_time, 2),
-#                 "disc_pretrain_time": round(disc_pretrain_time, 2),
-#                 "clas_pretrain_time": round(clas_pretrain_time, 2),
-#                 "gen_adv_time": round(gen_adv_time, 2),
-#                 "disc_adv_time": round(disc_adv_time, 2),
-#                 "clas_adv_time": round(clas_adv_time, 2),
-#                 "GPU_test_time"  : round(test_time, 2),
+            
+            dict_time_res = {
+                "GPU_train_time" : round(total_runtime, 2),
+                "gen_pretrain_time": round(gen_pretrain_time, 2),
+                "disc_pretrain_time": round(disc_pretrain_time, 2),
+                "clas_pretrain_time": round(clas_pretrain_time, 2),
+                "gen_adv_time": round(gen_adv_time, 2),
+                "disc_adv_time": round(disc_adv_time, 2),
+                "clas_adv_time": round(clas_adv_time, 2),
+                "GPU_test_time"  : round(test_time, 2),
 #                 "CPU_time" : cpu_time
-#             }
-#             return dict_time_res
+            }
+            return dict_time_res
             
 
 if __name__ == "__main__":
@@ -2271,39 +2236,111 @@ if __name__ == "__main__":
         config_file = None
     else:
         config_file = sys.argv[1]
-    main(config_file)
-
-
-
+        
+    # Setup
+    if config_file is None:
+        config_file = "spamGAN_config_smallunsup_opspam.json"
+        print('No config given, using {}'.format(config_file))
+        config = json.loads(open("spamGAN_config_smallunsup_opspam.json").read())
+    else:
+        print('Using config: {}'.format(config_file))
+        config = json.loads(open(config_file).read())    
     
-
-
-
-
-
-
-
-
-
-
+    # Get proportions if it's from final_runner.py
+    if "usp" in config_file:
+        BASEDIR = "/home/hanfeiyu/Pretrained-spamGAN/final_experiments/opspam/spamGAN_output"
+        data_paths = {}
+        
+        for train_pcent in [0.1, 0.3, 0.5, 0.7, 0.9, 1.0]:
+            if "tr{}".format(int(train_pcent*100)) in config_file:
+                for unsup_pcent in [0.0, 0.5, 0.7, 1.0]:
+                    if "usp{}".format(int(unsup_pcent * 100)) in config_file:
+                        time_result_file = 'tr{}_usp{}_time'.format(int(train_pcent*100), int(unsup_pcent * 100))
+                        all_result_file = 'tr{}_usp{}_all'.format(int(train_pcent*100), int(unsup_pcent * 100))
+                        bestclas_pretrain_result_file = 'tr{}_usp{}_bestclas_pretrain'.format(int(train_pcent*100), int(unsup_pcent * 100))
+                        bestclas_acc_result_file = 'tr{}_usp{}_bestclas_acc'.format(int(train_pcent*100), int(unsup_pcent * 100))
+                        bestclas_f1_result_file = 'tr{}_usp{}_bestclas_f1'.format(int(train_pcent*100), int(unsup_pcent * 100))
+                        bestclas_mixed_result_file = 'tr{}_usp{}_bestclas_mixed'.format(int(train_pcent*100), int(unsup_pcent * 100))
+                        break
+                    else:
+                        continue
+                break
+            else:
+                continue
+        
+        resultdir = os.path.join(BASEDIR, "result")
+        data_paths["time_result_file"] = os.path.join(resultdir, time_result_file)
+        data_paths["all_result_file"] = os.path.join(resultdir, all_result_file)
+        data_paths["bestclas_pretrain_result_file"] = os.path.join(resultdir, bestclas_pretrain_result_file)
+        data_paths["bestclas_acc_result_file"] = os.path.join(resultdir, bestclas_acc_result_file)
+        data_paths["bestclas_f1_result_file"] = os.path.join(resultdir, bestclas_f1_result_file)
+        data_paths["bestclas_mixed_result_file"] = os.path.join(resultdir, bestclas_mixed_result_file)
+        data_paths["bestclas_mixed_result_file"] = os.path.join(resultdir, bestclas_mixed_result_file)
+    
+        # Train or test
+        if config["gen_clas_test"] is False:
+            dict_time_res = main(config)
             
+            # Record time metrics
+            time_file_exists = os.path.isfile(data_paths["time_result_file"])
+            f = open(data_paths["time_result_file"],'a')
+            w = csv.DictWriter(f, dict_time_res.keys())
+            if not time_file_exists:
+                print("Writing time header...")
+                w.writeheader()
+            w.writerow(dict_time_res)
+            f.close()
+            
+        else:
+            dict_all_res, dict_bestclas_pretrain_res, dict_bestclas_acc_res, dict_bestclas_f1_res, dict_bestclas_mixed_res = main(config)
 
-
-
-
-
-
-
-
-
-
+            all_file_exists = os.path.isfile(data_paths["all_result_file"])
+            f = open(data_paths["all_result_file"],'a')
+            w = csv.DictWriter(f, dict_all_res.keys())
+            if not all_file_exists:
+                print("Writing all header...")
+                w.writeheader()
+            w.writerow(dict_all_res)
+            f.close()
+            
+            bestclas_pretrain_file_exists = os.path.isfile(data_paths["bestclas_pretrain_result_file"])
+            f = open(data_paths["bestclas_pretrain_result_file"],'a')
+            w = csv.DictWriter(f, dict_bestclas_pretrain_res.keys())
+            if not bestclas_pretrain_file_exists:
+                print("Writing bestclas-pretrain header...")
+                w.writeheader()
+            w.writerow(dict_bestclas_pretrain_res)
+            f.close()
+            
+            bestclas_acc_file_exists = os.path.isfile(data_paths["bestclas_acc_result_file"])
+            f = open(data_paths["bestclas_acc_result_file"],'a')
+            w = csv.DictWriter(f, dict_bestclas_acc_res.keys())
+            if not bestclas_acc_file_exists:
+                print("Writing bestclas-acc header...")
+                w.writeheader()
+            w.writerow(dict_bestclas_acc_res)
+            f.close()
+            
+            bestclas_f1_file_exists = os.path.isfile(data_paths["bestclas_f1_result_file"])
+            f = open(data_paths["bestclas_f1_result_file"],'a')
+            w = csv.DictWriter(f, dict_bestclas_f1_res.keys())
+            if not bestclas_f1_file_exists:
+                print("Writing bestclas-f1 header...")
+                w.writeheader()
+            w.writerow(dict_bestclas_f1_res)
+            f.close()
+            
+            bestclas_mixed_file_exists = os.path.isfile(data_paths["bestclas_mixed_result_file"])
+            f = open(data_paths["bestclas_mixed_result_file"],'a')
+            w = csv.DictWriter(f, dict_bestclas_mixed_res.keys())
+            if not bestclas_mixed_file_exists:
+                print("Writing bestclas-mixed header...")
+                w.writeheader()
+            w.writerow(dict_bestclas_mixed_res)
+            f.close()
+            
+    else:
+        main(config)
 
     
-
-
-
-
-
-
-
              

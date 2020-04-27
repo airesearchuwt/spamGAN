@@ -1,4 +1,6 @@
 import tensorflow as tf
+import json
+
 
 def test_random_sample():
     samples = tf.random.categorical(
@@ -35,5 +37,14 @@ def test_random_sample():
 
 
 if __name__ == "__main__":
-    input_json_path = "./gpt2/gpt2-small/hparams.json"
-    print(open(input_json_path).read())
+    config_file = "spamGAN_config_smallunsup_opspam.json"
+    config = json.loads(open(config_file).read())
+    config["test"] = "test_output"
+    
+    with open("test_output.json", "w") as output:
+        json.dump(config, output)
+        
+    input = json.loads(open("test_output.json").read())
+    print(input)
+    
+    
