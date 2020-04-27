@@ -20,6 +20,11 @@ import os
 import sys
 import json
 import numpy as np
+import collections
+import re
+import warnings
+
+from typing import Any, Dict
 
 import tensorflow as tf
 import texar.tf as tx
@@ -63,8 +68,17 @@ class GPT2Stack():
                  cache_dir=None,
                  hparams=None,
                  encode_mode=False):
-        
-        self._hparams = self.default_hparams()
+        if pretrained_model_name is None:
+            self.pretrained_model_name = "gpt2-small"
+        else:
+            self.pretrained_model_name = pretrained_model_name
+        if cache_dir is None:
+            self.cache_dir = os.path.abspath(
+                os.path.join("./gpt2", self.pretrained_model_name)
+                )
+        else:
+            self.cache_dir = cache_dir
+        self._hparams = self.default_hparams(self.cache_dir)
         self.variable_scope = "gpt2_stack"
         
         with tf.variable_scope(self.variable_scope):
@@ -85,6 +99,8 @@ class GPT2Stack():
                 output_layer=tf.transpose(self.word_embedder.embedding, (1, 0)),
                 hparams=self._hparams.decoder,
                 encode_mode=encode_mode)
+            
+        self._built = False
 
     def embed_tokens(self, tokens, positions, mode=None):
         word_embeds = self.word_embedder(tokens, mode=mode)
@@ -96,11 +112,13 @@ class GPT2Stack():
         return lambda tokens, positions, mode: self.embed_tokens(tokens, positions, mode)
     
     @staticmethod
-    def default_hparams():
+    def default_hparams(cache_dir):
         """
         Remap the config file
         """
-        input_json_path = "gpt2/gpt2-small/hparams.json"
+        input_json_path = os.path.abspath(
+            os.path.join(cache_dir, "hparams.json")
+            )
         
         config_gpt = json.loads(open(input_json_path).read())
         configs = dict()
@@ -162,15 +180,14 @@ class GPT2Stack():
         }
         configs["name"] =  "gpt2_stack"
     
-        return configs
+        return tx.HParams(configs, default_hparams=None)
     
     def _init_from_checkpoint(self, pretrained_model_name, cache_dir,
-                              scope_name, load_output_layer=True, **kwargs):
+                          scope_name, load_output_layer=True, **kwargs):
         r"""Initialize model parameters from weights stored in the pre-trained
         checkpoint.
 
         Args:
-            pretrained_model_name (str): Name of the pre-trained model.
             cache_dir (str): Path to the cache directory.
             scope_name (str): Scope name of the model.
             load_output_layer (bool): If `False`, will not load weights of the
@@ -338,14 +355,43 @@ class GPT2Stack():
                         pointer._initializer_op = tf.assign(pointer._variable,
                                                             array)
     
-    
-    
-    def collect_trainable_variables(self):
-        return tx.utils.collect_trainable_variables(
-            [self.word_embedder,
-             self.position_embedder,
-             self.decoder]
-            )
+    def _add_internal_trainable_variables(self):  # pylint: disable=invalid-name
+        """Collects trainable variables constructured internally in this module.
+
+        This is typically called at the end of `_build()` where all necessary
+        trainable variables have been constructed.
+        """
+        scope_name = self.variable_scope.name
+        # Escape to handle possible "." characters in the name.
+        # Append a slash to the end to avoid searching scopes that have this
+        # scope name as a prefix.
+        scope_name = re.escape(scope_name) + "/"
+        internal_trainable_variables = tf.get_collection(
+            tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope_name)
+        self._add_trainable_variable(internal_trainable_variables)
+
+    def _add_trainable_variable(self, variable):
+        """Adds a trainable variable to the trainable variable list of the
+        module.
+
+        Args:
+            variable: a (list of) trainable variable(s) constructed either
+                internally in the module or constructured outside but used
+                inside the module.
+        """
+        if isinstance(variable, (list, tuple)):
+            for var in variable:
+                self._add_trainable_variable(var)
+        else:
+            if variable not in self._trainable_variables:
+                self._trainable_variables.append(variable)
+                        
+#     def collect_trainable_variables(self):
+#         return tx.utils.collect_trainable_variables(
+#             [self.word_embedder,
+#              self.position_embedder,
+#              self.decoder]
+#             )
     
     def _build(self,
                decoding_strategy='train_greedy',
@@ -416,9 +462,13 @@ class GPT2Stack():
             sample_context=sample_context # spamGAN sample generator context
             )
         
-        if not self._built:
+        if self._built is False:
             self._add_internal_trainable_variables()
             self._built = True
+            self._init_from_checkpoint(
+                self.pretrained_model_name, self.cache_dir,
+                self.variable_scope.name, load_output_layer=True, **kwargs
+                )
         
         print("outputs: {}".format(outputs))
         return outputs
