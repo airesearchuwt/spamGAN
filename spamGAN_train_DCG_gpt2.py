@@ -405,13 +405,23 @@ def main(config = None):
                 return gen_lengths
             
             if sample_strategy == "infer_sample":
-                gpt2_context_helper = custom_helpers.GPT2ContextSampleEmbeddingHelper(
-                    g_decoder.embeddings(), 
-                    generator_dropout, 
-                    random_vector, 
-                    start_tokens, 
-                    end_token, 
-                    softmax_temperature
+#                 gpt2_context_helper = custom_helpers.GPT2ContextSampleEmbeddingHelper(
+#                     embedding=g_decoder.embeddings(), 
+#                     mode=generator_dropout, 
+#                     context=random_vector, 
+#                     start_tokens=start_tokens, 
+#                     end_token=end_token, 
+#                     softmax_temperature=softmax_temperature
+#                     )
+                topk = config["infer_topk"]
+                gpt2_context_helper = custom_helpers.GPT2ContextTopKSampleEmbeddingHelper(
+                    embedding=g_decoder.embeddings(), 
+                    mode=generator_dropout, 
+                    context=random_vector, 
+                    start_tokens=start_tokens, 
+                    end_token=end_token, 
+                    top_k=topk,
+                    softmax_temperature=softmax_temperature 
                     )
                 
                 gen_outputs, gen_lengths = g_decoder(

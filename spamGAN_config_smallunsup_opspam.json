@@ -5,12 +5,12 @@
 
 	"sample_strategy": "infer_sample",
 	"beam_width": 4,
-	
+	"infer_topk": 10,
 
 	"restore_model": false,
 	"clear_run_logs": false,
-	"log_dir": "/home/hanfeiyu/Pretrained-spamGAN/ckpt",
-	"checkpoint_dir": "/home/hanfeiyu/Pretrained-spamGAN/ckpt",
+	"log_dir": "/tmp",
+	"checkpoint_dir": "/tmp",
 	"load_checkpoint_file": null,
 
 	"gen_clas_test": false,
