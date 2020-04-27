@@ -24,13 +24,18 @@ import collections
 import re
 import warnings
 
-from typing import Any, Dict
-
 import tensorflow as tf
 import texar.tf as tx
+from typing import Any, Dict
+from abc import ABCMeta, abstractmethod
+from pathlib import Path
+from texar.tf.data.data_utils import maybe_download
+
 from custom_texar.custom_transformer_decoders import TransformerDecoder
 from texar.tf.modules.embedders import PositionEmbedder, WordEmbedder
 
+
+_default_texar_download_dir = None
 
 
 _GPT2_PATH = "https://storage.googleapis.com/gpt-2/models/"
@@ -38,38 +43,29 @@ _CHECKPOINT_FILES = [
     "checkpoint", "encoder.json", "hparams.json", "vocab.bpe",
     "model.ckpt.data-00000-of-00001", "model.ckpt.index", "model.ckpt.meta"]
 
-_MODEL_NAME = "GPT2"
-_MODEL2URL = {
-    'gpt2-small': [_GPT2_PATH + f"124M/{file}"
-                   for file in _CHECKPOINT_FILES],
-    'gpt2-medium': [_GPT2_PATH + f"355M/{file}"
-                    for file in _CHECKPOINT_FILES],
-    'gpt2-large': [_GPT2_PATH + f"774M/{file}"
-                   for file in _CHECKPOINT_FILES],
-    'gpt2-xl': [_GPT2_PATH + f"1558M/{file}"
-                for file in _CHECKPOINT_FILES],
-}
 
-# Raise warning for the deprecated pre-trained model names
-class MyDict(dict):
-    def __contains__(self, key):
-        if key == '117M':
-            warnings.warn("Pre-trained model name '117M' is deprecated, "
-                          "use 'gpt2-small' instead.", UserWarning)
-            return True
-        elif key == '345M':
-            warnings.warn("Pre-trained model name '345M' is deprecated, "
-                          "use 'gpt2-medium' instead.", UserWarning)
-            return True
+def default_download_dir(name):
+    r"""Return the directory to which packages will be downloaded by default.
+    """
+    global _default_texar_download_dir  # pylint: disable=global-statement
+    if _default_texar_download_dir is None:
+        if sys.platform == 'win32' and 'APPDATA' in os.environ:
+            # On Windows, use %APPDATA%
+            home_dir = Path(os.environ['APPDATA'])
         else:
-            return super().__contains__(key)
+            # Otherwise, install in the user's home directory.
+            home_dir = Path(os.environ["HOME"])
 
-_DEPRECATED_MODEL2URL = {
-    '117M': [_GPT2_PATH + f"124M/{file}" for file in _CHECKPOINT_FILES],
-    '345M': [_GPT2_PATH + f"355M/{file}" for file in _CHECKPOINT_FILES],
-}
-_MODEL2URL.update(_DEPRECATED_MODEL2URL)
-_MODEL2URL = MyDict(_MODEL2URL)  # type: ignore
+        if os.access(str(home_dir), os.W_OK):
+            _default_texar_download_dir = home_dir / 'texar_data'
+        else:
+            raise ValueError("The path {} is not writable. Please manually "
+                             "specify the download directory".format(home_dir))
+
+    if not _default_texar_download_dir.exists():
+        _default_texar_download_dir.mkdir(parents=True)
+        
+    return _default_texar_download_dir / name
 
 
 class GPT2Stack():
@@ -103,24 +99,58 @@ class GPT2Stack():
     .. document private functions
     .. automethod:: _build
     """
+    _MODEL_NAME = "GPT2"
+    _MODEL2URL = {
+        'gpt2-small': [_GPT2_PATH + f"124M/{file}"
+                       for file in _CHECKPOINT_FILES],
+        'gpt2-medium': [_GPT2_PATH + f"355M/{file}"
+                        for file in _CHECKPOINT_FILES],
+        'gpt2-large': [_GPT2_PATH + f"774M/{file}"
+                       for file in _CHECKPOINT_FILES],
+        'gpt2-xl': [_GPT2_PATH + f"1558M/{file}"
+                    for file in _CHECKPOINT_FILES],
+    }
+    
+    # Raise warning for the deprecated pre-trained model names
+    class MyDict(dict):
+        def __contains__(self, key):
+            if key == '117M':
+                warnings.warn("Pre-trained model name '117M' is deprecated, "
+                              "use 'gpt2-small' instead.", UserWarning)
+                return True
+            elif key == '345M':
+                warnings.warn("Pre-trained model name '345M' is deprecated, "
+                              "use 'gpt2-medium' instead.", UserWarning)
+                return True
+            else:
+                return super().__contains__(key)
+    
+    _DEPRECATED_MODEL2URL = {
+        '117M': [_GPT2_PATH + f"124M/{file}" for file in _CHECKPOINT_FILES],
+        '345M': [_GPT2_PATH + f"355M/{file}" for file in _CHECKPOINT_FILES],
+    }
+    _MODEL2URL.update(_DEPRECATED_MODEL2URL)
+    _MODEL2URL = MyDict(_MODEL2URL)  # type: ignore
+    
+    
     def __init__(self,
-                 cache_dir,
                  pretrained_model_name=None,
+                 cache_dir=None,
                  hparams=None,
                  encode_mode=False):
+        
         if pretrained_model_name is None:
             self._pretrained_model_name = "gpt2-small"
         else:
             self._pretrained_model_name = pretrained_model_name
-        self._cache_dir = cache_dir
-        self._pretrained_model_cache = os.path.abspath(
-            os.path.join(
-                os.path.join(self._cache_dir, "GPT2"),
-                self._pretrained_model_name
-                )
-            )
+            
+        if cache_dir is not None:
+            self._cache_dir = cache_dir
+        else:
+            self._cache_dir = self.download_checkpoint(self._pretrained_model_name, cache_dir)
+
         self._hparams = self._transform_config(
-            self._pretrained_model_name, self._pretrained_model_cache
+            self._pretrained_model_name, self._cache_dir
             )
         
         with tf.variable_scope("gpt2_stack") as vs:
@@ -172,6 +202,7 @@ class GPT2Stack():
 
         hidden_dim = config_gpt["n_embd"]
         configs = {
+            "pretrained_model_name": pretrained_model_name,
             "vocab_size": config_gpt["n_vocab"],
             "context_size": config_gpt["n_ctx"],
             "embedding_size": config_gpt["n_embd"], "embed": {
@@ -232,6 +263,97 @@ class GPT2Stack():
             "name": "decoder"
         }})
         return tx.HParams(configs, default_hparams=None)
+    
+    def load_pretrained_config(self,
+                               pretrained_model_name=None,
+                               cache_dir=None,
+                               hparams=None):
+        r"""Load paths and configurations of the pre-trained model.
+
+        Args:
+            pretrained_model_name (optional): A str with the name
+                of a pre-trained model to load. If `None`, will use the model
+                name in :attr:`hparams`.
+            cache_dir (optional): The path to a folder in which the
+                pre-trained models will be cached. If `None` (default),
+                a default directory will be used.
+            hparams (dict or HParams, optional): Hyperparameters. Missing
+                hyperparameter will be set to default values. See
+                :meth:`default_hparams` for the hyperparameter structure
+                and default values.
+        """
+        if not hasattr(self, "_hparams"):
+            self._hparams = HParams(hparams, self.default_hparams())
+        else:
+            # Probably already parsed by subclasses. We rely on subclass
+            # implementations to get this right.
+            # As a sanity check, we require `hparams` to be `None` in this case.
+            if hparams is not None:
+                raise ValueError(
+                    "`self._hparams` is already assigned, but `hparams` "
+                    "argument is not None.")
+
+        self.pretrained_model_dir = None
+        self.pretrained_model_name = pretrained_model_name
+
+        if self.pretrained_model_name is None:
+            self.pretrained_model_name = self._hparams.pretrained_model_name
+        if self.pretrained_model_name is not None:
+            self.pretrained_model_dir = self.download_checkpoint(
+                self.pretrained_model_name, cache_dir)
+            pretrained_model_hparams = self._transform_config(
+                self.pretrained_model_name, self.pretrained_model_dir)
+            self._hparams = HParams(
+                pretrained_model_hparams, self._hparams.todict())
+    
+    @classmethod
+    def download_checkpoint(cls, pretrained_model_name, cache_dir=None):
+        r"""Download the specified pre-trained checkpoint, and return the
+        directory in which the checkpoint is cached.
+
+        Args:
+            pretrained_model_name (str): Name of the model checkpoint.
+            cache_dir (str, optional): Path to the cache directory. If `None`,
+                uses the default directory (user's home directory).
+
+        Returns:
+            Path to the cache directory.
+        """
+        if pretrained_model_name in cls._MODEL2URL:
+            download_path = cls._MODEL2URL[pretrained_model_name]
+        else:
+            raise ValueError(
+                "Pre-trained model not found: {}".format(pretrained_model_name))
+
+        if cache_dir is None:
+            cache_path = default_download_dir(cls._MODEL_NAME)
+        else:
+            cache_path = Path(cache_dir)
+        cache_path = cache_path / pretrained_model_name
+
+        if not cache_path.exists():
+            if isinstance(download_path, list):
+                for path in download_path:
+                    maybe_download(path, str(cache_path))
+            else:
+                filename = download_path.split('/')[-1]
+                maybe_download(download_path, str(cache_path), extract=True)
+                folder = None
+                for file in cache_path.iterdir():
+                    if file.is_dir():
+                        folder = file
+                assert folder is not None
+                (cache_path / filename).unlink()
+                for file in folder.iterdir():
+                    file.rename(file.parents[1] / file.name)
+                folder.rmdir()
+            print("Pre-trained {} checkpoint {} cached to {}".format(
+                cls._MODEL_NAME, pretrained_model_name, cache_path))
+        else:
+            print("Using cached pre-trained {} checkpoint from {}.".format(
+                cls._MODEL_NAME, cache_path))
+
+        return str(cache_path)
     
     def _init_from_checkpoint(self, pretrained_model_name, cache_dir,
                           scope_name, load_output_layer=True, **kwargs):
@@ -523,7 +645,7 @@ class GPT2Stack():
             self._built = True
             
             self._init_from_checkpoint(
-                self._pretrained_model_name, self._pretrained_model_cache, 
+                self._pretrained_model_name, self._cache_dir, 
                 self.variable_scope.name, load_output_layer=True
                 )
             

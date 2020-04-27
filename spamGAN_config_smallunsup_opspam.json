@@ -235,7 +235,6 @@
 
 
 	"gen_hparams": {
-		"pretrained_model_cache": "/Users/hanfeiyu/texar_data",
 
 		"gpt2_decoder": {
 			"pretrained_model_name": "gpt2-small",

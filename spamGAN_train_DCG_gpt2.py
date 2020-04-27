@@ -34,7 +34,6 @@ class Generator(tf.keras.Model):
 #             hparams=gen_config["gpt2_decoder"],
 #             encode_mode=False)
         self.decoder = GPT2Stack(
-            cache_dir=gen_config["pretrained_model_cache"],
             hparams=gen_config["gpt2_decoder"],
             encode_mode=False)
         self.word_embedder = self.decoder.word_embedder
