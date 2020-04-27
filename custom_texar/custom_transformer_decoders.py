@@ -653,7 +653,6 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     )
                     sequence_lengths = sequence_lengths + 1
                 rets = outputs, sequence_lengths
-                print("rets: {}".format(rets))
 
             else:  # Beam-search decoding
                 # Ignore `decoding_strategy`; Assume `helper` is not set

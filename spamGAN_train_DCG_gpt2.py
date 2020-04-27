@@ -34,6 +34,7 @@ class Generator(tf.keras.Model):
 #             hparams=gen_config["gpt2_decoder"],
 #             encode_mode=False)
         self.decoder = GPT2Stack(
+            cache_dir=gen_config["pretrained_model_cache"],
             hparams=gen_config["gpt2_decoder"],
             encode_mode=False)
         self.word_embedder = self.decoder.word_embedder
@@ -48,7 +49,7 @@ class Generator(tf.keras.Model):
 
 class Discriminator(tf.keras.Model):
     """Discriminator wrapper"""
-    def __init__(self, disc_config, dropout):
+    def __init__(self, disc_config):
         super(Discriminator, self).__init__()
         self.encoder = GPT2Decoder(
             hparams=disc_config["gpt2_decoder"],
@@ -66,7 +67,7 @@ class Discriminator(tf.keras.Model):
 #             hparams = class_config['encoder'], cell_dropout_mode=dropout)
 
 class Classifier(tf.keras.Model):
-    def __init__(self, class_config, dropout):
+    def __init__(self, class_config):
         super(Classifier, self).__init__()
         self.encoder = GPT2Decoder(
             hparams=class_config["gpt2_decoder"],
@@ -228,8 +229,6 @@ def main(config = None):
         # Embeddings
 #         emb_model = Embedder(vocab_size, config["emb_hparams)
 #         emb_model = GPT2Embedder(config["gpt2_emb_hparams)
-        emb_model = GPT2Embedder(config["disc_hparams"])
-        embedder = emb_model.embedder
         
         # Generator
 #         gen_model = Generator(vocab_size, config["gen_hparams["rnn_decoder"], generator_dropout)
@@ -247,13 +246,9 @@ def main(config = None):
 #             disc_embedder = embedder
             
         discriminator_dropout = tf.placeholder(dtype=tf.string)
-        disc_model = Discriminator(config["disc_hparams"], discriminator_dropout)
+        disc_model = Discriminator(config["disc_hparams"])
         discriminator = disc_model.encoder
-        
-        if config["disc_has_own_embedder"]:
-            disc_embedder = discriminator.embeddings()
-        else:
-            disc_embedder = embedder
+        disc_embedder = discriminator.embeddings()
 
         # Classifier
 #         if config["clas_has_own_embedder: 
@@ -263,13 +258,9 @@ def main(config = None):
 #             clas_embedder = embedder
 
         classifier_dropout = tf.placeholder(dtype=tf.string)
-        clas_model = Classifier(config["clas_hparams"], classifier_dropout)
+        clas_model = Classifier(config["clas_hparams"])
         classifier = clas_model.encoder
-
-        if config["clas_has_own_embedder"]: 
-            clas_embedder = classifier.embeddings()
-        else:
-            clas_embedder = embedder
+        clas_embedder = classifier.embeddings()
 
         # Critics
         disc_crit_layer = tf.layers.Dense(**config["disc_crit_hparams"])
@@ -336,12 +327,9 @@ def main(config = None):
             mle_optimizer = tx.core.get_optimizer(global_step=global_step,
                                                   hparams=config["g_opt_mle_hparams"])
             if config["is_gpt2_trainable"] is True:
-                g_variables = tx.utils.collect_trainable_variables([g_decoder,
-                                                                    g_decoder.word_embedder,
-                                                                    g_decoder.position_embedder])
+                g_variables = tx.utils.collect_trainable_variables([g_decoder])
             else:
-                g_variables = tx.utils.collect_trainable_variables([g_decoder.word_embedder,
-                                                                    g_decoder.position_embedder])
+                raise ValueError(f"Generator is frozen")
                 
             mle_train_op = mle_optimizer.minimize(loss_mle,
                                                   global_step=global_step,
@@ -426,7 +414,7 @@ def main(config = None):
                     end_token, 
                     softmax_temperature
                     )
-                print("before infer_sample")
+                
                 gen_outputs, gen_lengths = g_decoder(
                     decoding_strategy='infer_sample',
                     helper=gpt2_context_helper,
@@ -435,7 +423,6 @@ def main(config = None):
                     )
                 gen_logits = gen_outputs.logits
                 gen_sample_ids = gen_outputs.sample_id
-                print("after infer_sample")
                 
             elif sample_strategy == "infer_greedy":
                 gpt2_context_helper = custom_helpers.GPT2ContextSampleEmbeddingHelper(
@@ -691,14 +678,7 @@ def main(config = None):
             #disc_loss.set_shape(())
             disc_loss.set_shape(disc_loss.shape)
 #             if config["let_discriminator_train_embedder:
-            if config["disc_has_own_embedder"]:
-                d_variables = tx.utils.collect_trainable_variables([discriminator,
-                                                                    discriminator.word_embedder,
-                                                                    discriminator.position_embedder])
-            else:
-                d_variables = tx.utils.collect_trainable_variables([discriminator,
-                                                                    emb_model.word_embedder,
-                                                                    emb_model.position_embedder])
+            d_variables = tx.utils.collect_trainable_variables([discriminator])
                 
             disc_optimizer = tx.core.get_optimizer(hparams=config["d_opt_hparams"])
 
@@ -889,14 +869,7 @@ def main(config = None):
             #clas_loss.set_shape(())
             clas_loss.set_shape(clas_loss.shape)
 
-            if config["clas_has_own_embedder"]:
-                c_variables = tx.utils.collect_trainable_variables([classifier,
-                                                                    classifier.word_embedder,
-                                                                    classifier.position_embedder])
-            else:
-                c_variables = tx.utils.collect_trainable_variables([classifier,
-                                                                    emb_model.word_embedder,
-                                                                    emb_model.position_embedder])
+            c_variables = tx.utils.collect_trainable_variables([classifier])
                 
             clas_optimizer = tx.core.get_optimizer(hparams=config["c_opt_hparams"])
             clas_train_op = clas_optimizer.minimize(clas_loss,
@@ -1134,11 +1107,9 @@ def main(config = None):
 #             pg_variables = tx.utils.collect_trainable_variables([g_decoder, embedder])
 
             if config["is_gpt2_trainable"] is True:
-                pg_variables = tx.utils.collect_trainable_variables([g_decoder,
-                                                                     g_decoder.word_embedder,
-                                                                     g_decoder.position_embedder])
+                pg_variables = tx.utils.collect_trainable_variables([g_decoder])
             else:
-                pg_variables = tx.utils.collect_trainable_variables([embedder])
+                raise ValueError(f"Generator is frozen")
                 
             
             pg_optimizer = tx.core.get_optimizer(global_step=global_step,
@@ -2008,8 +1979,8 @@ def main(config = None):
             patience = 0
             # Disc Pretraining
             logger.info("\nStarting discriminator pretraining...")
-            if config["disc_has_own_embedder"] and False:
-                sess.run(copy_embedder_weights)
+#             if config["disc_has_own_embedder"] and False:
+#                 sess.run(copy_embedder_weights)
             disc_rtns = {'step' : 0}
             for e in range(config["d_pretrain_epochs"]):
                 logger.info('\nDisc Pretrain Epoch {} '.format(e))
@@ -2069,8 +2040,8 @@ def main(config = None):
             min_loss = 1e8
             patience = 0
             clas_rtns = {'step' : 0, 'real_acc': 0}
-            if config["clas_has_own_embedder"] and False:
-                sess.run(clas_copy_embedder_weights)
+#             if config["clas_has_own_embedder"] and False:
+#                 sess.run(clas_copy_embedder_weights)
             for e in range(config["c_pretrain_epochs"]):
                 logger.info('\nClas Pretrain Epoch {}'.format(e))
                 clas_rtns = clas_run_epoch(sess, 'pretrain', sum_writer, clas_rtns['step'])

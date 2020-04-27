@@ -32,6 +32,46 @@ from custom_texar.custom_transformer_decoders import TransformerDecoder
 from texar.tf.modules.embedders import PositionEmbedder, WordEmbedder
 
 
+
+_GPT2_PATH = "https://storage.googleapis.com/gpt-2/models/"
+_CHECKPOINT_FILES = [
+    "checkpoint", "encoder.json", "hparams.json", "vocab.bpe",
+    "model.ckpt.data-00000-of-00001", "model.ckpt.index", "model.ckpt.meta"]
+
+_MODEL_NAME = "GPT2"
+_MODEL2URL = {
+    'gpt2-small': [_GPT2_PATH + f"124M/{file}"
+                   for file in _CHECKPOINT_FILES],
+    'gpt2-medium': [_GPT2_PATH + f"355M/{file}"
+                    for file in _CHECKPOINT_FILES],
+    'gpt2-large': [_GPT2_PATH + f"774M/{file}"
+                   for file in _CHECKPOINT_FILES],
+    'gpt2-xl': [_GPT2_PATH + f"1558M/{file}"
+                for file in _CHECKPOINT_FILES],
+}
+
+# Raise warning for the deprecated pre-trained model names
+class MyDict(dict):
+    def __contains__(self, key):
+        if key == '117M':
+            warnings.warn("Pre-trained model name '117M' is deprecated, "
+                          "use 'gpt2-small' instead.", UserWarning)
+            return True
+        elif key == '345M':
+            warnings.warn("Pre-trained model name '345M' is deprecated, "
+                          "use 'gpt2-medium' instead.", UserWarning)
+            return True
+        else:
+            return super().__contains__(key)
+
+_DEPRECATED_MODEL2URL = {
+    '117M': [_GPT2_PATH + f"124M/{file}" for file in _CHECKPOINT_FILES],
+    '345M': [_GPT2_PATH + f"355M/{file}" for file in _CHECKPOINT_FILES],
+}
+_MODEL2URL.update(_DEPRECATED_MODEL2URL)
+_MODEL2URL = MyDict(_MODEL2URL)  # type: ignore
+
+
 class GPT2Stack():
     r"""Raw GPT2 Transformer for decoding sequences. Please see
     :class:`~texar.tf.modules.PretrainedGPT2Mixin` for a brief description
@@ -64,25 +104,29 @@ class GPT2Stack():
     .. automethod:: _build
     """
     def __init__(self,
+                 cache_dir,
                  pretrained_model_name=None,
-                 cache_dir=None,
                  hparams=None,
                  encode_mode=False):
         if pretrained_model_name is None:
-            self.pretrained_model_name = "gpt2-small"
+            self._pretrained_model_name = "gpt2-small"
         else:
-            self.pretrained_model_name = pretrained_model_name
-        if cache_dir is None:
-            self.cache_dir = os.path.abspath(
-                os.path.join("./gpt2", self.pretrained_model_name)
+            self._pretrained_model_name = pretrained_model_name
+        self._cache_dir = cache_dir
+        self._pretrained_model_cache = os.path.abspath(
+            os.path.join(
+                os.path.join(self._cache_dir, "GPT2"),
+                self._pretrained_model_name
                 )
-        else:
-            self.cache_dir = cache_dir
-        self._hparams = self.default_hparams(self.cache_dir)
-        self.variable_scope = "gpt2_stack"
+            )
+        self._hparams = self._transform_config(
+            self._pretrained_model_name, self._pretrained_model_cache
+            )
+        
+        with tf.variable_scope("gpt2_stack") as vs:
+            self.variable_scope = vs
         
         with tf.variable_scope(self.variable_scope):
-            
             # Word embedding
             self.word_embedder = WordEmbedder(
                 vocab_size=self._hparams.vocab_size,
@@ -100,6 +144,7 @@ class GPT2Stack():
                 hparams=self._hparams.decoder,
                 encode_mode=encode_mode)
             
+        self._trainable_variables = []
         self._built = False
 
     def embed_tokens(self, tokens, positions, mode=None):
@@ -111,48 +156,55 @@ class GPT2Stack():
     def embeddings(self):
         return lambda tokens, positions, mode: self.embed_tokens(tokens, positions, mode)
     
-    @staticmethod
-    def default_hparams(cache_dir):
-        """
-        Remap the config file
-        """
-        input_json_path = os.path.abspath(
-            os.path.join(cache_dir, "hparams.json")
-            )
-        
-        config_gpt = json.loads(open(input_json_path).read())
-        configs = dict()
-        configs["vocab_size"] = config_gpt["n_vocab"]
-        configs["context_size"] = config_gpt["n_ctx"]
-        configs["embedding_size"] = config_gpt["n_embd"]
+    def _transform_config(self, pretrained_model_name: str,
+                          cache_dir: str) -> Dict[str, Any]:
+        info = list(os.walk(cache_dir))
+        root, _, files = info[0]
+        config_path = None
+        for file in files:
+            if file.endswith('hparams.json'):
+                config_path = os.path.join(root, file)
+        if config_path is None:
+            raise ValueError(f"Cannot find the config file in {cache_dir}")
+
+        with open(config_path) as f:
+            config_gpt = json.loads(f.read())
+
         hidden_dim = config_gpt["n_embd"]
-        configs["embed"] = {
-            "dim": hidden_dim,
-            "name": "word_embeddings"
+        configs = {
+            "vocab_size": config_gpt["n_vocab"],
+            "context_size": config_gpt["n_ctx"],
+            "embedding_size": config_gpt["n_embd"], "embed": {
+                "dim": hidden_dim,
+                "name": "word_embeddings"
+            },
+            "position_size": config_gpt["n_ctx"],
+            "position_embed": {
+                "dim": hidden_dim,
+                "name": "position_embeddings"
+            }
         }
-        configs["position_size"] = config_gpt["n_ctx"]
-        configs["position_embed"] = {
+
+        module_name = "decoder" 
+        configs.update({module_name: {
             "dim": hidden_dim,
-            "name": "position_embeddings"
-        }
-        configs["decoder"] = {
-            "dim": hidden_dim,
+            "num_blocks": config_gpt["n_layer"],
             "embedding_dropout": 0.1,
             "residual_dropout": 0.1,
-            "num_blocks": config_gpt["n_layer"],
             "multihead_attention": {
                 "use_bias": True,
                 "num_units": hidden_dim,
                 "num_heads": config_gpt["n_head"],
                 "output_dim": hidden_dim,
-                'dropout_rate': 0.1,
+                "dropout_rate": 0.1,
+                "name": "self"
             },
             "initializer": {
                 "type": "variance_scaling_initializer",
                 "kwargs": {
-                    "scale": 1.0,
-                    "mode": "fan_avg",
-                    "distribution": "uniform",
+                        'factor': 1.0,
+                        'mode': 'FAN_AVG',
+                        'uniform': True
                 },
             },
             "poswise_feedforward": {
@@ -160,26 +212,25 @@ class GPT2Stack():
                     {
                         "type": "Dense",
                         "kwargs": {
-                            "name": "conv1",
+                            'name': 'intermediate',
+                            'activation': 'gelu',
                             "units": hidden_dim * 4,
-                            "activation": "gelu",
                             "use_bias": True,
                         }
                     },
                     {
                         "type": "Dense",
                         "kwargs": {
-                            "name": "conv2",
+                            'activation': None,
+                            'name': 'output',
                             "units": hidden_dim,
                             "use_bias": True,
                         }
                     }
                 ],
-                "name": "ffn",
             },
-        }
-        configs["name"] =  "gpt2_stack"
-    
+            "name": "decoder"
+        }})
         return tx.HParams(configs, default_hparams=None)
     
     def _init_from_checkpoint(self, pretrained_model_name, cache_dir,
@@ -218,10 +269,10 @@ class GPT2Stack():
             }
 
             layer_tensor_map = {
-                "ln_1/b": scope_name + '/layer_{}/beta',
-                "ln_1/g": scope_name + '/layer_{}/gamma',
-                "ln_2/b": scope_name + '/layer_{}/past_poswise_ln/beta',
-                "ln_2/g": scope_name + '/layer_{}/past_poswise_ln/gamma',
+                "ln_1/b": 'layer_{}/beta',
+                "ln_1/g": 'layer_{}/gamma',
+                "ln_2/b": 'layer_{}/past_poswise_ln/beta',
+                "ln_2/g": 'layer_{}/past_poswise_ln/gamma',
                 "mlp/c_fc/b": scope_name + '/decoder/layer_{}'
                                            '/ffn/intermediate/bias',
                 "mlp/c_fc/w": scope_name + '/decoder/layer_{}'
@@ -386,33 +437,38 @@ class GPT2Stack():
             if variable not in self._trainable_variables:
                 self._trainable_variables.append(variable)
                         
-#     def collect_trainable_variables(self):
-#         return tx.utils.collect_trainable_variables(
-#             [self.word_embedder,
-#              self.position_embedder,
-#              self.decoder]
-#             )
+    @property
+    def trainable_variables(self):
+        """The list of trainable variables of the module.
+        """
+        if not self._built:
+            raise TexarError(
+                "Attempting to access trainable_variables before module %s "
+                "was fully built. The module is built once it is called, "
+                "e.g., with `%s(...)`" % (self.name, self.name))
+        return self._trainable_variables
     
-    def _build(self,
-               decoding_strategy='train_greedy',
-               inputs=None,
-               memory=None,
-               memory_sequence_length=None,
-               memory_attention_bias=None,
-               beam_width=None,
-               length_penalty=0.,
-               start_tokens=None,
-               end_token=None,
-               context=None,
-               context_sequence_length=None,
-               softmax_temperature=None,
-               max_decoding_length=None,
-               impute_finished=False,
-               helper=None,
-               mode=None,
-               mle_context=None, # spamGAN MLE generator context
-               sample_context=None # spamGAN sample generator context
-               ):
+    
+    def __call__(self,
+                 decoding_strategy='train_greedy',
+                 inputs=None,
+                 memory=None,
+                 memory_sequence_length=None,
+                 memory_attention_bias=None,
+                 beam_width=None,
+                 length_penalty=0.,
+                 start_tokens=None,
+                 end_token=None,
+                 context=None,
+                 context_sequence_length=None,
+                 softmax_temperature=None,
+                 max_decoding_length=None,
+                 impute_finished=False,
+                 helper=None,
+                 mode=None,
+                 mle_context=None, # spamGAN MLE generator context
+                 sample_context=None # spamGAN sample generator context
+                 ):
         r"""Performs decoding. Has exact the same interfaces with
         :meth:`texar.tf.modules.TransformerDecoder._build` except inputs
         which is a tensor with shape `[batch_size, max_time]`. Please refer to
@@ -465,11 +521,12 @@ class GPT2Stack():
         if self._built is False:
             self._add_internal_trainable_variables()
             self._built = True
+            
             self._init_from_checkpoint(
-                self.pretrained_model_name, self.cache_dir,
-                self.variable_scope.name, load_output_layer=True, **kwargs
+                self._pretrained_model_name, self._pretrained_model_cache, 
+                self.variable_scope.name, load_output_layer=True
                 )
-        
+            
         print("outputs: {}".format(outputs))
         return outputs
     

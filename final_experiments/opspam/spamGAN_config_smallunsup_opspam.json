@@ -1,4 +1,5 @@
 {
+	"pretrained_model_cache": "/Users/hanfeiyu/texar_data",
 	"is_gpt2_trainable": true,
 	"is_bert_trainable": true,
 	"is_xlnet_trainable": true,

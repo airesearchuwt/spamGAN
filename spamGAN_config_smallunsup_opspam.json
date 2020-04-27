@@ -93,9 +93,6 @@
 
 	"clas_min_ent_lambda": 1.0,
 
-	"clas_has_own_embedder": true,
-	"disc_has_own_embedder": true,
-
 	"mle_loss_in_adv": true,
 
 	"discriminator_loss_lambda": 1.0,
@@ -238,6 +235,7 @@
 
 
 	"gen_hparams": {
+		"pretrained_model_cache": "/Users/hanfeiyu/texar_data",
 
 		"gpt2_decoder": {
 			"pretrained_model_name": "gpt2-small",
@@ -522,8 +520,8 @@
 		"optimizer": {
 			"type": "tensorflow.contrib.opt.AdamWOptimizer",
 			"kwargs": {
-				"weight_decay": 1.25e-7,
-				"learning_rate": 1.25e-7
+				"weight_decay": 1e-5,
+				"learning_rate": 6.25e-5
 			}
 		},
 		"learning_rate_decay": {
