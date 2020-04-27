@@ -75,12 +75,6 @@ def make_data(trp, usp, run):
         'clas_pred_output' : "testpreds.txt",
         "gen_perp_output": "perplexities.txt",
         'dir' : curdir,
-        'time_result_file' : time_result_file,
-        'all_result_file' : all_result_file,
-        'bestclas_pretrain_result_file' : bestclas_pretrain_result_file,
-        'bestclas_acc_result_file' : bestclas_acc_result_file,
-        'bestclas_f1_result_file' : bestclas_f1_result_file,
-        'bestclas_mixed_result_file' : bestclas_mixed_result_file,
         "config_json": os.path.join(curdir, config_json)
     }
 
