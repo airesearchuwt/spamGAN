@@ -4,8 +4,6 @@ import csv
 import json
 import random
 import time
-from pandas.conftest import datapath
-from scipy.io.arff.tests.test_arffread import data_path
 
 
 BASEDIR = '/home/hanfeiyu/Pretrained-spamGAN/final_experiments/opspam/spamGAN_output/'
