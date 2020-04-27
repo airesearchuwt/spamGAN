@@ -134,26 +134,20 @@ class GPT2Stack():
     
     
     def __init__(self,
-                 pretrained_model_name=None,
+                 pretrained_model_name="gpt2-small",
                  cache_dir=None,
                  hparams=None,
                  encode_mode=False):
         
-        if pretrained_model_name is None:
-            self._pretrained_model_name = "gpt2-small"
+        self._pretrained_model_name = pretrained_model_name
+        self._cache_dir = self.download_checkpoint(self._pretrained_model_name, cache_dir)
+        self._hparams = self._transform_config(self._pretrained_model_name, self._cache_dir)
+        if hparams is None:
+            self._name = "gpt2_stack"
         else:
-            self._pretrained_model_name = pretrained_model_name
-            
-        if cache_dir is not None:
-            self._cache_dir = cache_dir
-        else:
-            self._cache_dir = self.download_checkpoint(self._pretrained_model_name, cache_dir)
-
-        self._hparams = self._transform_config(
-            self._pretrained_model_name, self._cache_dir
-            )
+            self._name = hparams["name"]
         
-        with tf.variable_scope("gpt2_stack") as vs:
+        with tf.variable_scope(self._name) as vs:
             self.variable_scope = vs
         
         with tf.variable_scope(self.variable_scope):
