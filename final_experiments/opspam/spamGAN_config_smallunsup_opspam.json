@@ -72,7 +72,7 @@
 
 	"prior_prob": 0.5,
 	"noise_size": 64,
-	"class_size": 9,
+	"class_size": 8,
 
 
 	"disc_label_smoothing_epsilon": 0.25,
