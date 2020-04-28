@@ -525,7 +525,12 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             self.context_sequence_length = context_sequence_length - 1
         else:
             self.context = None
-
+            
+        if self.encode_mode is False: # Add dropout layer for classification
+            self.dropout_layer = tf.keras.layers.Dropout(rate=0.5)
+        else: # Add dropout layer for classification
+            self.dropout_layer = tf.keras.layers.Dropout(rate=0.5)
+            
         self.embedding = embedding
         self.mode = mode
         self.softmax_temperature = softmax_temperature
@@ -559,24 +564,20 @@ class TransformerDecoder(ModuleBase, TFDecoder):
 #                     sample_id=preds
 #                 )
             logits = self._output_layer(decoder_output)
+            logits = self.dropout_layer(logits, is_train_mode(mode))
             
             if self.encode_mode is False:
                 if decoding_strategy == "train_greedy":
                     preds = tf.cast(tf.argmax(logits, axis=-1), tf.int32)
-                    rets = TransformerDecoderOutput(
-                        logits=logits,
-                        sample_id=preds
-                    )
                 else: # Train-sample decoding
                     if self.softmax_temperature is not None:
                         logits = logits / self.softmax_temperature
-                        
                     sample_id_sampler = tf.distributions.Categorical(logits=logits)
-                    sample_id = sample_id_sampler.sample(seed=None)
-  
-                    rets = TransformerDecoderOutput(
+                    preds = sample_id_sampler.sample(seed=None)
+                
+                rets = TransformerDecoderOutput(
                         logits=logits,
-                        sample_id=sample_id
+                        sample_id=preds
                     )
             else:
                 rets = TransformerDecoderEncodeOutput(
@@ -593,7 +594,6 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     raise ValueError("Helper required for inference-like decoding")
                 
                 self._helper = helper
-
                 self._cache = self._init_cache(memory, memory_attention_bias,
                                                beam_search_decoding=False)
                 if context is not None:
@@ -612,6 +612,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 
                 # Check if Gumbel-Softmax sampling
                 logits = outputs.logits
+                logits = self.dropout_layer(logits, is_train_mode(mode))
                 try:
                     tf.shape(outputs.sample_id)[2]
                 except ValueError:
@@ -673,6 +674,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     length_penalty=length_penalty,
                     decode_length=max_decoding_length,
                 )
+                logits = self.dropout_layer(logits, is_train_mode(mode))
                 
                 sample_id_sampler = tf.distributions.Categorical(logits=logits)
                 sample_id = sample_id_sampler.sample(seed=None)
