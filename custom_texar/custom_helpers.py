@@ -325,25 +325,25 @@ class GPT2ContextGreedyEmbeddingHelper(Helper):
             raise ValueError("end_token must be a scalar")
         
         self._embedding_args_cnt = len(get_args(self._embedding_fn))
-        if self._embedding_args_cnt == 1:
-            self._start_inputs = self._embedding_fn(self._start_tokens)
-            self._start_inputs = tf.concat([self._start_inputs, self.context], axis=-1)
-        elif self._embedding_args_cnt == 2:
+        if self._embedding_args_cnt == 2:
             # Position index is 0 in the beginning
             times = tf.zeros([self._batch_size], dtype=tf.int32)
             self._start_inputs = self._embedding_fn(self._start_tokens, times)
-            self._start_inputs = tf.concat([self._start_inputs[:, :(self._start_inputs.shape[-1]-self.context.shape[-1])], self.context], axis=-1)
 #             print("times: {}".format(times))
 #             print("self._start_inputs: {}".format(self._start_inputs))
         elif self._embedding_args_cnt == 3:
             # Position index is 0 in the beginning
             times = tf.zeros([self._batch_size], dtype=tf.int32)
             self._start_inputs = self._embedding_fn(self._start_tokens, times, self.mode)
-            self._start_inputs = tf.concat([self._start_inputs[:, :(self._start_inputs.shape[-1]-self.context.shape[-1])], self.context], axis=-1)
 #             print("times: {}".format(times))
 #             print("self._start_inputs: {}".format(self._start_inputs))
         else:
-            raise ValueError('`embedding` should expect 1, 2 or 3 arguments.')
+            raise ValueError('`embedding` should expect 2 or 3 arguments.')
+        
+        self._start_inputs = tf.concat(
+            [self._start_inputs[:, :(self._start_inputs.shape[-1]-self.context.shape[-1])], self.context], 
+            axis=-1
+            )
 
     @property
     def batch_size(self):
@@ -376,14 +376,7 @@ class GPT2ContextGreedyEmbeddingHelper(Helper):
         finished = tf.equal(sample_ids, self._end_token)
         all_finished = tf.reduce_all(finished)
 
-        if self._embedding_args_cnt == 1:
-            del time, outputs  # unused by next_inputs_fn
-            next_inputs = tf.cond(
-                all_finished,
-                # If we're finished, the next_inputs value doesn't matter
-                lambda: self._start_inputs,
-                lambda: tf.concat([self._embedding_fn(sample_ids), self.context], axis=-1))
-        elif self._embedding_args_cnt == 2:
+        if self._embedding_args_cnt == 2:
             del outputs
             # Prepare the position embedding of the next step
             times = tf.ones(self._batch_size, dtype=tf.int32) * (time + 1)
@@ -548,7 +541,7 @@ class GPT2ContextTopKSampleEmbeddingHelper(GPT2ContextGreedyEmbeddingHelper):
         return sample_ids
 
 
-class SoftmaxEmbeddingHelper(Helper):
+class GPT2ContextSoftmaxEmbeddingHelper(Helper):
     """A helper that feeds softmax probabilities over vocabulary
     to the next step.
     Uses the softmax probability vector to pass through word embeddings to
@@ -585,7 +578,7 @@ class SoftmaxEmbeddingHelper(Helper):
             `max_decoding_length` of the decoder is reached.
     """
 
-    def __init__(self, embedding, start_tokens, end_token, tau,
+    def __init__(self, embedding, mode, context, start_tokens, end_token, tau,
                  embedding_size=None, stop_gradient=False, use_finish=True):
         if callable(embedding):
             self._embedding_fn = embedding
@@ -599,7 +592,9 @@ class SoftmaxEmbeddingHelper(Helper):
             self._embedding_fn = (
                 lambda soft_ids: soft_embedding_lookup(embedding, soft_ids))
             self._embedding_size = tf.shape(embedding)[0]
-
+            
+        self.context = context
+        self.mode = mode
         self._start_tokens = tf.convert_to_tensor(
             start_tokens, dtype=tf.int32, name="start_tokens")
         self._end_token = tf.convert_to_tensor(
@@ -613,15 +608,23 @@ class SoftmaxEmbeddingHelper(Helper):
         soft_start_tokens = tf.one_hot(
             self._start_tokens, self._embedding_size, dtype=tf.float32)
         self._embedding_args_cnt = len(utils.get_args(self._embedding_fn))
-        if self._embedding_args_cnt == 1:
-            self._start_inputs = self._embedding_fn(soft_ids=soft_start_tokens)
-        elif self._embedding_args_cnt == 2:
+        if self._embedding_args_cnt == 2:
             # Position index is 0 in the beginning
             times = tf.zeros([self._batch_size], dtype=tf.int32)
             self._start_inputs = self._embedding_fn(
-                soft_ids=soft_start_tokens, times=times)
+                soft_start_tokens, times)
+        elif self._embedding_args_cnt == 3:
+            # Position index is 0 in the beginning
+            times = tf.zeros([self._batch_size], dtype=tf.int32)
+            self._start_inputs = self._embedding_fn(
+                soft_start_tokens, times, self.mode)
         else:
-            raise ValueError('`embedding` should expect 1 or 2 arguments.')
+            raise ValueError('`embedding` should expect 2 or 3 arguments.')
+        
+        self._start_inputs = tf.concat(
+            [self._start_inputs[:, :(self._start_inputs.shape[-1]-self.context.shape[-1])], self.context], 
+            axis=-1
+            )
 
         self._batch_size = tf.size(self._start_tokens)
         self._tau = tau
@@ -665,26 +668,30 @@ class SoftmaxEmbeddingHelper(Helper):
         if self._stop_gradient:
             sample_ids = tf.stop_gradient(sample_ids)
 
-        if self._embedding_args_cnt == 1:
-            del time, outputs  # unused by next_inputs_fn
-            next_inputs = tf.cond(
-                all_finished,
-                # If we're finished, the next_inputs value doesn't matter
-                lambda: self._start_inputs,
-                lambda: self._embedding_fn(soft_ids=sample_ids))
-        elif self._embedding_args_cnt == 2:
+        if self._embedding_args_cnt == 2:
             # Prepare the position embedding of the next step
             times = tf.ones(self._batch_size, dtype=tf.int32) * (time + 1)
             next_inputs = tf.cond(
                 all_finished,
                 # If we're finished, the next_inputs value doesn't matter
                 lambda: self._start_inputs,
-                lambda: self._embedding_fn(soft_ids=sample_ids, times=times))
-
+                lambda: tf.concat(
+                    [self._embedding_fn(sample_ids, times)[:, :(self._start_inputs.shape[-1]-self.context.shape[-1])], self.context], axis=-1)
+                )
+        elif self._embedding_args_cnt == 3:
+            # Prepare the position embedding of the next step
+            times = tf.ones(self._batch_size, dtype=tf.int32) * (time + 1)
+            next_inputs = tf.cond(
+                all_finished,
+                # If we're finished, the next_inputs value doesn't matter
+                lambda: self._start_inputs,
+                lambda: tf.concat(
+                    [self._embedding_fn(sample_ids, times, self.mode)[:, :(self._start_inputs.shape[-1]-self.context.shape[-1])], self.context], axis=-1)
+                )
         return (finished, next_inputs, state)
 
 
-class GumbelSoftmaxEmbeddingHelper(SoftmaxEmbeddingHelper):
+class GPT2ContextGumbelSoftmaxEmbeddingHelper(GPT2ContextSoftmaxEmbeddingHelper):
     """A helper that feeds gumbel softmax sample to the next step.
     Uses the gumbel softmax vector to pass through word embeddings to
     get the next input (i.e., a mixed word embedding).
@@ -727,13 +734,15 @@ class GumbelSoftmaxEmbeddingHelper(SoftmaxEmbeddingHelper):
             generated. If `False`, decoding will continue until
             `max_decoding_length` of the decoder is reached.
     """
-    def __init__(self, embedding, start_tokens, end_token, tau,
+    def __init__(self, embedding, mode, context, start_tokens, end_token, tau,
                  embedding_size=None, straight_through=False,
                  stop_gradient=False, use_finish=True):
-        super(GumbelSoftmaxEmbeddingHelper, self).__init__(
-            embedding, start_tokens, end_token, tau, embedding_size,
+        super(GPT2ContextGumbelSoftmaxEmbeddingHelper, self).__init__(
+            embedding, mode, context, start_tokens, end_token, tau, embedding_size,
             stop_gradient, use_finish)
         self._straight_through = straight_through
+        self.mode = mode
+        self.context = context
 
     def sample(self, time, outputs, state, name=None):
         """Returns `sample_id` of shape `[batch_size, vocab_size]`. If

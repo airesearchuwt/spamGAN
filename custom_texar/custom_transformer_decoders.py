@@ -539,7 +539,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
 #         if helper is None and beam_width is None and \
 #                 decoding_strategy == 'train_greedy':  # Teacher-forcing
         if helper is None and beam_width is None and \
-                (decoding_strategy == 'train_greedy' or decoding_strategy == "train_sample"):  # Teacher-forcing
+                (decoding_strategy == "train_greedy" or decoding_strategy == "train_sample"):  # Teacher-forcing
             decoder_self_attention_bias = (
                 attn.attention_bias_lower_triangle(
                     shape_list(inputs)[1]))
@@ -567,7 +567,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                         logits=logits,
                         sample_id=preds
                     )
-                else: # Train-sample
+                else: # Train-sample decoding
                     if self.softmax_temperature is not None:
                         logits = logits / self.softmax_temperature
                         
@@ -587,38 +587,11 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             if max_decoding_length is None:
                 max_decoding_length = self._hparams.max_decoding_length
             self.max_decoding_length = max_decoding_length
-            if beam_width is None:  # Inference-like decoding
-                # Prepare helper
+            if beam_width is None and decoding_strategy == "infer_like":  # Inference-like decoding
+                # Check helper
                 if helper is None:
-                    if decoding_strategy == "infer_greedy":
-#                         helper = tx_helper.GreedyEmbeddingHelper(
-#                             embedding, start_tokens, end_token)
-                        if sample_context is None:
-                            helper = tx_helper.SampleEmbeddingHelper(
-                                embedding, start_tokens, end_token,
-                                softmax_temperature)
-                        else:
-                            # Decoding strategy for sample spamGAN
-                            helper = custom_helpers.GPT2ContextSampleEmbeddingHelper(
-                                embedding, self.mode, sample_context, start_tokens, end_token,
-                                softmax_temperature)
-                    elif decoding_strategy == "infer_sample":
-#                         helper = tx_helper.SampleEmbeddingHelper(
-#                             embedding, start_tokens, end_token,
-#                             softmax_temperature)
-                        if sample_context is None:
-                            helper = tx_helper.SampleEmbeddingHelper(
-                                embedding, start_tokens, end_token,
-                                softmax_temperature)
-                        else:
-                            # Decoding strategy for sample spamGAN
-                            helper = custom_helpers.GPT2ContextSampleEmbeddingHelper(
-                                embedding, self.mode, sample_context, start_tokens, end_token,
-                                softmax_temperature)
-                    else:
-                        raise ValueError(
-                            "Unknown decoding strategy: {}".format(
-                                decoding_strategy))
+                    raise ValueError("Helper required for inference-like decoding")
+                
                 self._helper = helper
 
                 self._cache = self._init_cache(memory, memory_attention_bias,
@@ -637,6 +610,17 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     output_time_major=False,
                     scope=self.variable_scope)
                 
+                # Check if Gumbel-Softmax sampling
+                logits = outputs.logits
+                try:
+                    tf.shape(outputs.sample_id)[2]
+                except ValueError:
+                    sample_id = outputs.sample_id
+                else:
+                    sample_id_sampler = tf.distributions.Categorical(
+                        logits=outputs.sample_id)
+                    sample_id = sample_id_sampler.sample(seed=None)
+                
                 if context is not None:
                     # Here the length of sample_id will be larger than that
                     # of logit by 1, because there will be a additional
@@ -644,16 +628,22 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     # the start_id should be the first token of the
                     # given context
                     outputs = TransformerDecoderOutput(
-                        logits=outputs.logits,
+                        logits=logits,
                         sample_id=tf.concat(
                             [tf.expand_dims(start_tokens, 1),
-                             outputs.sample_id],
+                             sample_id],
                             axis=1
                         )
                     )
                     sequence_lengths = sequence_lengths + 1
+                else:
+                    outputs = TransformerDecoderOutput(
+                        logits=logits,
+                        sample_id=sample_id
+                        )
+                    
                 rets = outputs, sequence_lengths
-
+                
             else:  # Beam-search decoding
                 # Ignore `decoding_strategy`; Assume `helper` is not set
                 if helper is not None:

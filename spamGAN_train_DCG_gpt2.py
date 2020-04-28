@@ -392,7 +392,7 @@ def main(config = None):
            
             # Specify sample strategy
             sample_strategy = config["sample_strategy"]
-            logger.info("Sampling using decoding strategy: {}...".format(sample_strategy))
+            logger.info("Sampling using strategy: {}...".format(sample_strategy))
             
             # Obtain lengths of generated sentences 
             def get_gen_lengths(gen_sample_ids):
@@ -404,47 +404,61 @@ def main(config = None):
                 gen_lengths = tf.squeeze(gen_lengths_list, axis=1)
                 return gen_lengths
             
-            if sample_strategy == "infer_sample":
-#                 gpt2_context_helper = custom_helpers.GPT2ContextSampleEmbeddingHelper(
-#                     embedding=g_decoder.embeddings(), 
-#                     mode=generator_dropout, 
-#                     context=random_vector, 
-#                     start_tokens=start_tokens, 
-#                     end_token=end_token, 
-#                     softmax_temperature=softmax_temperature
-#                     )
-                topk = config["infer_topk"]
-                gpt2_context_helper = custom_helpers.GPT2ContextTopKSampleEmbeddingHelper(
-                    embedding=g_decoder.embeddings(), 
-                    mode=generator_dropout, 
-                    context=random_vector, 
-                    start_tokens=start_tokens, 
-                    end_token=end_token, 
-                    top_k=topk,
-                    softmax_temperature=softmax_temperature 
-                    )
+            if sample_strategy == "infer_like":
+                sample_helper = config["sample_helper"]
+                
+                if sample_helper == "greedy":
+                    gpt2_context_helper = custom_helpers.GPT2ContextGreedyEmbeddingHelper(
+                        embedding=g_decoder.embeddings(), 
+                        mode=generator_dropout, 
+                        context=random_vector, 
+                        start_tokens=start_tokens, 
+                        end_token=end_token, 
+                        softmax_temperature=softmax_temperature
+                        )
+                elif sample_helper == "sample":
+                    gpt2_context_helper = custom_helpers.GPT2ContextSampleEmbeddingHelper(
+                        embedding=g_decoder.embeddings(), 
+                        mode=generator_dropout, 
+                        context=random_vector, 
+                        start_tokens=start_tokens, 
+                        end_token=end_token, 
+                        softmax_temperature=softmax_temperature
+                        )
+                elif sample_helper == "topk_sample":
+                    topk = config["infer_topk"]
+                    gpt2_context_helper = custom_helpers.GPT2ContextTopKSampleEmbeddingHelper(
+                        embedding=g_decoder.embeddings(), 
+                        mode=generator_dropout, 
+                        context=random_vector, 
+                        start_tokens=start_tokens, 
+                        end_token=end_token, 
+                        top_k=topk,
+                        softmax_temperature=softmax_temperature 
+                        )
+                elif sample_helper == "softmax":
+                    gpt2_context_helper = custom_helpers.GPT2ContextSoftmaxEmbeddingHelper(
+                        embedding=g_decoder.embeddings(), 
+                        mode=generator_dropout, 
+                        context=random_vector, 
+                        start_tokens=start_tokens, 
+                        end_token=end_token, 
+                        embedding_size=vocab_size,
+                        tau=softmax_temperature 
+                        )
+                elif sample_helper == "gumbel_softmax":
+                    gpt2_context_helper = custom_helpers.GPT2ContextGumbelSoftmaxEmbeddingHelper(
+                        embedding=g_decoder.embeddings(), 
+                        mode=generator_dropout, 
+                        context=random_vector, 
+                        start_tokens=start_tokens, 
+                        end_token=end_token, 
+                        embedding_size=vocab_size,
+                        tau=softmax_temperature 
+                        )
                 
                 gen_outputs, gen_lengths = g_decoder(
-                    decoding_strategy='infer_sample',
-                    helper=gpt2_context_helper,
-                    mode=generator_dropout,
-                    max_decoding_length=max_length
-                    )
-                gen_logits = gen_outputs.logits
-                gen_sample_ids = gen_outputs.sample_id
-                
-            elif sample_strategy == "infer_greedy":
-                gpt2_context_helper = custom_helpers.GPT2ContextSampleEmbeddingHelper(
-                    g_decoder.embeddings(), 
-                    generator_dropout, 
-                    random_vector, 
-                    start_tokens, 
-                    end_token, 
-                    softmax_temperature
-                    )
-                
-                gen_outputs, gen_lengths = g_decoder(
-                    decoding_strategy='infer_greedy',
+                    decoding_strategy="infer_like",
                     helper=gpt2_context_helper,
                     mode=generator_dropout,
                     max_decoding_length=max_length
@@ -467,6 +481,7 @@ def main(config = None):
                 gen_logits = gen_outputs.logits
                 gen_sample_ids = gen_outputs.sample_id
                 gen_lengths = get_gen_lengths(gen_sample_ids)
+                
             elif sample_strategy == "train_sample":
                 gen_inputs = inp[:, 1:(tf.shape(inp)[1]-1)]
                 gen_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(x)[1]) # Trim non-ending sentences. 

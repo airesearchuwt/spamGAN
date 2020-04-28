@@ -172,7 +172,10 @@ class GPT2Stack():
         self._built = False
 
     def embed_tokens(self, tokens, positions, mode=None):
-        word_embeds = self.word_embedder(tokens, mode=mode)
+        try:
+            word_embeds = self.word_embedder(ids=tokens, mode=mode)
+        except TypeError:
+            word_embeds = self.word_embedder(soft_ids=tokens, mode=mode)
         pos_embeds = self.position_embedder(positions, mode=mode)
         return word_embeds + pos_embeds
     

@@ -3,9 +3,13 @@
 	"is_bert_trainable": true,
 	"is_xlnet_trainable": true,
 
-	"sample_strategy": "infer_sample",
+	
+	"sample_strategy": "infer_like",
+	"sample_helper": "gumbel_softmax",
 	"beam_width": 4,
 	"infer_topk": 10,
+	"sampling_temperature": 5.0,
+	
 
 	"restore_model": false,
 	"clear_run_logs": false,
@@ -64,8 +68,7 @@
 	"max_decoding_length_infer": 256,
 	"annealing_length": 256,
 	"adversarial_length": 256,
-
-	"sampling_temperature": 5.0,
+	
 
 	"linear_decay_pg_weights": true,
 
