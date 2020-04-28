@@ -4,7 +4,7 @@
 	"is_xlnet_trainable": true,
 
 	
-	"sample_strategy": "infer_like",
+	"sample_strategy": "train",
 	"sample_helper": "sample",
 	"beam_width": 4,
 	"infer_topk":16,
@@ -77,7 +77,7 @@
 	"class_size": 8,
 
 
-	"disc_label_smoothing_epsilon": 0.25,
+	"disc_label_smoothing_epsilon": 0.05,
 
 	"adv_max_clip": 100,
 	"min_log_prob": 0.1,

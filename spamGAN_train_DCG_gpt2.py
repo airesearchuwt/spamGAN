@@ -292,6 +292,7 @@ def main(config = None):
             
             # Specify sample strategy
             sample_strategy = config["sample_strategy"]
+            sample_helper = config["sample_helper"]
             softmax_temperature = tf.constant(config["sampling_temperature"], dtype=tf.float32)
             logger.info("Sampling using strategy: {}...".format(sample_strategy))
             
@@ -305,9 +306,7 @@ def main(config = None):
                 gen_lengths = tf.squeeze(gen_lengths_list, axis=1)
                 return gen_lengths
             
-            if sample_strategy == "infer_like":
-                sample_helper = config["sample_helper"]
-                
+            if sample_strategy == "infer":
                 if sample_helper == "greedy":
                     gpt2_context_helper = custom_helpers.GPT2ContextGreedyEmbeddingHelper(
                         embedding=g_decoder.embeddings(), 
@@ -359,7 +358,7 @@ def main(config = None):
                         )
                 
                 gen_outputs, gen_lengths = g_decoder(
-                    decoding_strategy="infer_like",
+                    decoding_strategy="infer",
                     helper=gpt2_context_helper,
                     mode=generator_dropout,
                     max_decoding_length=max_length
@@ -367,30 +366,14 @@ def main(config = None):
                 gen_logits = gen_outputs.logits
                 gen_sample_ids = gen_outputs.sample_id
                 
-            elif sample_strategy == "train_greedy":
+            elif sample_strategy == "train":
                 gen_inputs = inp[:, 1:(tf.shape(inp)[1]-1)]
                 gen_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(x)[1]) # Trim non-ending sentences. 
                 tiled_random_vector = tf.reshape(
                     tf.tile(random_vector, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size+class_size])
-         
-                gen_outputs = g_decoder(
-                    decoding_strategy='train_greedy',
-                    inputs=gen_inputs,
-                    mode=generator_dropout,
-                    mle_context=tiled_random_vector
-                    )
-                gen_logits = gen_outputs.logits
-                gen_sample_ids = gen_outputs.sample_id
-                gen_lengths = get_gen_lengths(gen_sample_ids)
                 
-            elif sample_strategy == "train_sample":
-                gen_inputs = inp[:, 1:(tf.shape(inp)[1]-1)]
-                gen_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(x)[1]) # Trim non-ending sentences. 
-                tiled_random_vector = tf.reshape(
-                    tf.tile(random_vector, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size+class_size])
-          
                 gen_outputs = g_decoder(
-                    decoding_strategy="train_sample",
+                    decoding_strategy="train_sample" if sample_helper == "sample" else "train_greedy",
                     inputs=gen_inputs,
                     softmax_temperature=config["sampling_temperature"],
                     mode=generator_dropout,
@@ -409,9 +392,8 @@ def main(config = None):
                 beam_random_vector = tf.concat([beam_random_context, 
                                            tf.cast(beam_tiled_random_classes, tf.float32)], 
                                            axis=-1)
-                
                 gen_outputs = g_decoder(
-                    decoding_strategy='beam_search',
+                    decoding_strategy="beam_search",
                     mode=generator_dropout,
                     beam_width=beam_width,
                     start_tokens=start_tokens,
