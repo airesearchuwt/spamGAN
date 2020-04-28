@@ -214,9 +214,9 @@ class GPT2Stack():
         }
 
         module_name = "decoder" 
-        embedding_dropout = 0.3 if encode_mode is False else 0.3
-        residual_dropout = 0.3 if encode_mode is False else 0.3
-        multihead_attention_dropout = 0.1 if encode_mode is False else 0.3
+        embedding_dropout = 0.3 if encode_mode is False else 0.5
+        residual_dropout = 0.3 if encode_mode is False else 0.5
+        multihead_attention_dropout = 0.3 if encode_mode is False else 0.5
         configs.update({module_name: {
             "dim": hidden_dim,
             "num_blocks": config_gpt["n_layer"],
