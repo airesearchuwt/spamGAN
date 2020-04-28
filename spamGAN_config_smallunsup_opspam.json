@@ -52,7 +52,7 @@
 	"gen_mle_adv_epochs": 1,
 
 	"adv_train_max_gen_examples": 1000,
-	"adv_disc_max_ex": 1000,
+	"adv_disc_max_ex": 5000,
 	"adv_gen_train_with_unsup": false,
 
 
