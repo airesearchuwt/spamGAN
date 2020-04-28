@@ -5,7 +5,7 @@
 
 	
 	"sample_strategy": "infer_like",
-	"sample_helper": "gumbel_softmax",
+	"sample_helper": "sample",
 	"beam_width": 4,
 	"infer_topk": 10,
 	"sampling_temperature": 1.0,
