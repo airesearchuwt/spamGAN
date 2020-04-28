@@ -142,6 +142,7 @@ class GPT2Stack():
         self._pretrained_model_name = pretrained_model_name
         self._cache_dir = self.download_checkpoint(self._pretrained_model_name, cache_dir)
         self._hparams = self._transform_config(self._pretrained_model_name, self._cache_dir)
+        self._encode_mode = encode_mode
         if hparams is None:
             self._name = "gpt2_stack"
         else:
@@ -183,8 +184,7 @@ class GPT2Stack():
     def embeddings(self):
         return lambda tokens, positions, mode: self.embed_tokens(tokens, positions, mode)
     
-    def _transform_config(self, pretrained_model_name: str,
-                          cache_dir: str) -> Dict[str, Any]:
+    def _transform_config(self, pretrained_model_name: str, cache_dir: str) -> Dict[str, Any]:
         info = list(os.walk(cache_dir))
         root, _, files = info[0]
         config_path = None
@@ -214,17 +214,20 @@ class GPT2Stack():
         }
 
         module_name = "decoder" 
+        embedding_dropout = 0.3 if self._encode_mode is False else 0.3
+        residual_dropout = 0.3 if self._encode_mode is False else 0.3
+        multihead_attention_dropout = 0.1 if self._encode_mode is False else 0.3
         configs.update({module_name: {
             "dim": hidden_dim,
             "num_blocks": config_gpt["n_layer"],
-            "embedding_dropout": 0.1,
-            "residual_dropout": 0.1,
+            "embedding_dropout": embedding_dropout,
+            "residual_dropout": residual_dropout,
             "multihead_attention": {
                 "use_bias": True,
                 "num_units": hidden_dim,
                 "num_heads": config_gpt["n_head"],
                 "output_dim": hidden_dim,
-                "dropout_rate": 0.1,
+                "dropout_rate": multihead_attention_dropout,
                 "name": "self"
             },
             "initializer": {

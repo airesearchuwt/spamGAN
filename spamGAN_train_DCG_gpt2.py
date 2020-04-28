@@ -582,7 +582,6 @@ def main(config = None):
             gen_lengths = tf.clip_by_value(gen_lengths, 0, tf.shape(fake_inp)[1])
 
             if config["add_sentence_progress"]:
-                f_progress_vector = tf.ones_like(fake_inp)
                 # Array of  [batch_size, tstep, 1] like 
                 #  [[1, 2, 3, 4...]
                 #   [1, 2, 3, 4...]]
