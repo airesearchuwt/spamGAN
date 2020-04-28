@@ -177,14 +177,12 @@ def main(config = None):
         disc_model = Discriminator(config["disc_hparams"])
         discriminator = disc_model.encoder
         disc_embedder = discriminator.embeddings()
-        disc_dropout_layer = tf.keras.layers.Dropout(rate=0)
 
         # Classifier
         classifier_dropout = tf.placeholder(dtype=tf.string)
         clas_model = Classifier(config["clas_hparams"])
         classifier = clas_model.encoder
         clas_embedder = classifier.embeddings()
-        clas_dropout_layer = tf.keras.layers.Dropout(rate=0)
 
         # Critics
         disc_crit_layer = tf.layers.Dense(**config["disc_crit_hparams"])
@@ -555,7 +553,7 @@ def main(config = None):
             disc_loss.set_shape(disc_loss.shape)
             
             
-            d_variables = tx.utils.collect_trainable_variables([discriminator, disc_dropout_layer])
+            d_variables = tx.utils.collect_trainable_variables([discriminator])
                 
             disc_optimizer = tx.core.get_optimizer(hparams=config["d_opt_hparams"])
 
@@ -596,9 +594,7 @@ def main(config = None):
 
 
             r_probs = tf.math.sigmoid(r_disc_score)
-            r_probs = disc_dropout_layer(r_probs, is_train_mode(discriminator_dropout))
             f_probs = tf.math.sigmoid(f_disc_score)
-            f_probs = disc_dropout_layer(f_probs, is_train_mode(discriminator_dropout))
             r_preds = tf.cast(tf.round(r_probs), tf.int32)
             f_preds = tf.cast(tf.round(f_probs), tf.int32)
             mean_r_disc_score = tf.reduce_mean(r_disc_score)
@@ -723,7 +719,7 @@ def main(config = None):
                     
             clas_loss.set_shape(clas_loss.shape)
 
-            c_variables = tx.utils.collect_trainable_variables([classifier, clas_dropout_layer])
+            c_variables = tx.utils.collect_trainable_variables([classifier])
                 
             clas_optimizer = tx.core.get_optimizer(hparams=config["c_opt_hparams"])
             clas_train_op = clas_optimizer.minimize(clas_loss,
@@ -764,9 +760,7 @@ def main(config = None):
             
 
             r_probs = tf.math.sigmoid(r_clas_score)
-            r_probs = clas_dropout_layer(r_probs, is_train_mode(classifier_dropout))
             f_probs = tf.math.sigmoid(f_clas_score)
-            f_probs = clas_dropout_layer(f_probs, is_train_mode(classifier_dropout))
             r_clas_preds = tf.cast(tf.round(r_probs), tf.int32)
             f_clas_preds = tf.cast(tf.round(f_probs), tf.int32)
             random_class_labels_ints = tf.cast(random_class_labels, tf.int32)

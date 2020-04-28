@@ -526,10 +526,10 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         else:
             self.context = None
             
-        if self.encode_mode is False: # Add dropout layer for classification
-            self.dropout_layer = tf.keras.layers.Dropout(rate=0.5)
+        if self.encode_mode is False: # Add dropout layer for generation
+            self.dropout_layer = tf.keras.layers.Dropout(rate=0.3)
         else: # Add dropout layer for classification
-            self.dropout_layer = tf.keras.layers.Dropout(rate=0.5)
+            self.dropout_layer = tf.keras.layers.Dropout(rate=0.7)
             
         self.embedding = embedding
         self.mode = mode
