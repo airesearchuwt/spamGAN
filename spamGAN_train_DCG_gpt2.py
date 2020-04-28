@@ -177,14 +177,14 @@ def main(config = None):
         disc_model = Discriminator(config["disc_hparams"])
         discriminator = disc_model.encoder
         disc_embedder = discriminator.embeddings()
-        disc_dropout_layer = tf.keras.layers.Dropout(rate=0.3)
+        disc_dropout_layer = tf.keras.layers.Dropout(rate=0)
 
         # Classifier
         classifier_dropout = tf.placeholder(dtype=tf.string)
         clas_model = Classifier(config["clas_hparams"])
         classifier = clas_model.encoder
         clas_embedder = classifier.embeddings()
-        clas_dropout_layer = tf.keras.layers.Dropout(rate=0.3)
+        clas_dropout_layer = tf.keras.layers.Dropout(rate=0)
 
         # Critics
         disc_crit_layer = tf.layers.Dense(**config["disc_crit_hparams"])
