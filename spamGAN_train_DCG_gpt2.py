@@ -764,21 +764,10 @@ def main(config = None):
             r_clas_preds = tf.cast(tf.round(r_probs), tf.int32)
             f_clas_preds = tf.cast(tf.round(f_probs), tf.int32)
             random_class_labels_ints = tf.cast(random_class_labels, tf.int32)
-
             r_clas_acc = tf.reduce_mean(tf.contrib.metrics.accuracy(
                 predictions=r_clas_preds, labels=data_labels))
             f_clas_acc = tf.reduce_mean(tf.contrib.metrics.accuracy(
                 predictions=f_clas_preds, labels=random_class_labels_ints))
-            r_clas_prec = tf.reduce_mean(tf.metrics.precision(
-                predictions=r_clas_preds, labels=data_labels))
-            f_clas_prec = tf.reduce_mean(tf.metrics.precision(
-                predictions=f_clas_preds, labels=random_class_labels_ints))
-            r_clas_recl = tf.reduce_mean(tf.metrics.recall(
-                predictions=r_clas_preds, labels=data_labels))
-            f_clas_recl = tf.reduce_mean(tf.metrics.recall(
-                predictions=f_clas_preds, labels=random_class_labels_ints))
-            r_f1 = 2 * (r_clas_prec * r_clas_recl) / (r_clas_prec + r_clas_recl)
-            f_f1 = 2 * (f_clas_prec * f_clas_recl) / (f_clas_prec + f_clas_recl)
             
             # Preparations for calculating f1 scores
             r_tp = tf.reduce_mean(tf.metrics.true_positives(
@@ -803,12 +792,6 @@ def main(config = None):
             tf.summary.scalar('f_clas_loss', f_clas_loss)
             tf.summary.scalar('r_clas_acc', r_clas_acc)
             tf.summary.scalar('f_clas_acc', f_clas_acc)
-            tf.summary.scalar('r_clas_prec', r_clas_prec)
-            tf.summary.scalar('f_clas_prec', f_clas_prec)
-            tf.summary.scalar('r_clas_recl', r_clas_recl)
-            tf.summary.scalar('f_clas_recl', f_clas_recl)
-            tf.summary.scalar('r_f1', r_f1)
-            tf.summary.scalar('f_f1', f_f1)
             tf.summary.scalar('r_tp', r_tp)
             tf.summary.scalar('f_tp', f_tp)
             tf.summary.scalar('r_tn', r_tn)
@@ -1445,14 +1428,8 @@ def main(config = None):
                         'fake_loss' : f_clas_loss,
                         'r_clas_acc' : r_clas_acc,
                         'f_clas_acc' : f_clas_acc,
-                        'r_clas_prec' : r_clas_prec,
-                        'f_clas_prec' : f_clas_prec,
-                        'r_clas_recl' : r_clas_recl,
-                        'f_clas_recl' : f_clas_recl,
                         'r_clas_q_logit' : r_clas_q_logit,
                         'real_class' : data_labels,
-                        'r_clas_f1' : r_f1,
-                        'f_clas_f1' : f_f1,
                         "r_tp": r_tp,
                         "f_tp": f_tp,
                         "r_tn": r_tn,
@@ -2009,7 +1986,7 @@ if __name__ == "__main__":
         config = json.loads(open(config_file).read())    
     
     # Get proportions if it's from final_runner.py
-    if "usp" in config_file:
+    if "tr" in config_file and "usp" in config_file:
         BASEDIR = "/home/hanfeiyu/Pretrained-spamGAN/final_experiments/opspam/spamGAN_output"
         data_paths = {}
         
@@ -2100,7 +2077,8 @@ if __name__ == "__main__":
                 w.writeheader()
             w.writerow(dict_bestclas_mixed_res)
             f.close()
-            
+    
+    # Not from final_runner.py
     else:
         main(config)
 

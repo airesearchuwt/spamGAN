@@ -4,10 +4,10 @@
 	"is_xlnet_trainable": true,
 
 	
-	"sample_strategy": "train",
-	"sample_helper": "sample",
+	"sample_strategy": "infer",
+	"sample_helper": "topk_sample",
 	"beam_width": 4,
-	"infer_topk":16,
+	"infer_topk":64,
 	"sampling_temperature": 1.0,
 	
 
