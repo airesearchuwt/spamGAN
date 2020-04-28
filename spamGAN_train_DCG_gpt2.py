@@ -171,21 +171,20 @@ def main(config = None):
         generator_dropout = tf.placeholder(tf.string)
         gen_model = Generator(config["gen_hparams"])
         g_decoder = gen_model.decoder
-        gen_dropout_layer = tf.keras.layers.Dropout(rate=0.5)
 
         # Discriminator
         discriminator_dropout = tf.placeholder(dtype=tf.string)
         disc_model = Discriminator(config["disc_hparams"])
         discriminator = disc_model.encoder
         disc_embedder = discriminator.embeddings()
-        disc_dropout_layer = tf.keras.layers.Dropout(rate=0.5)
+        disc_dropout_layer = tf.keras.layers.Dropout(rate=0.3)
 
         # Classifier
         classifier_dropout = tf.placeholder(dtype=tf.string)
         clas_model = Classifier(config["clas_hparams"])
         classifier = clas_model.encoder
         clas_embedder = classifier.embeddings()
-        clas_dropout_layer = tf.keras.layers.Dropout(rate=0.5)
+        clas_dropout_layer = tf.keras.layers.Dropout(rate=0.3)
 
         # Critics
         disc_crit_layer = tf.layers.Dense(**config["disc_crit_hparams"])
