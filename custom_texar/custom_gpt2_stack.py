@@ -139,10 +139,10 @@ class GPT2Stack():
                  hparams=None,
                  encode_mode=False):
         
+        self._encode_mode = encode_mode
         self._pretrained_model_name = pretrained_model_name
         self._cache_dir = self.download_checkpoint(self._pretrained_model_name, cache_dir)
-        self._hparams = self._transform_config(self._pretrained_model_name, self._cache_dir)
-        self._encode_mode = encode_mode
+        self._hparams = self._transform_config(self._pretrained_model_name, self._cache_dir, self._encode_mode)
         if hparams is None:
             self._name = "gpt2_stack"
         else:
@@ -167,7 +167,7 @@ class GPT2Stack():
                 vocab_size=self._hparams.vocab_size,
                 output_layer=tf.transpose(self.word_embedder.embedding, (1, 0)),
                 hparams=self._hparams.decoder,
-                encode_mode=encode_mode)
+                encode_mode=self._encode_mode)
             
         self._trainable_variables = []
         self._built = False
@@ -184,7 +184,7 @@ class GPT2Stack():
     def embeddings(self):
         return lambda tokens, positions, mode: self.embed_tokens(tokens, positions, mode)
     
-    def _transform_config(self, pretrained_model_name: str, cache_dir: str) -> Dict[str, Any]:
+    def _transform_config(self, pretrained_model_name: str, cache_dir: str, encode_mode) -> Dict[str, Any]:
         info = list(os.walk(cache_dir))
         root, _, files = info[0]
         config_path = None
@@ -214,9 +214,9 @@ class GPT2Stack():
         }
 
         module_name = "decoder" 
-        embedding_dropout = 0.3 if self._encode_mode is False else 0.3
-        residual_dropout = 0.3 if self._encode_mode is False else 0.3
-        multihead_attention_dropout = 0.1 if self._encode_mode is False else 0.3
+        embedding_dropout = 0.3 if encode_mode is False else 0.3
+        residual_dropout = 0.3 if encode_mode is False else 0.3
+        multihead_attention_dropout = 0.1 if encode_mode is False else 0.3
         configs.update({module_name: {
             "dim": hidden_dim,
             "num_blocks": config_gpt["n_layer"],
