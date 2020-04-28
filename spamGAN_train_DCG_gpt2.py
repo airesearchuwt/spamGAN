@@ -13,18 +13,10 @@ from custom_texar import custom_helpers
 from custom_texar.custom_multi_aligned_data import MultiAlignedData
 from custom_texar.custom_gpt2_decoder import GPT2Decoder
 from custom_texar.custom_gpt2_stack import GPT2Stack
+from texar.tf.utils.mode import is_train_mode
 
 # import wrapper
 
-
-
-# class Generator(tf.keras.Model):
-#     """Generator wrapper for checkpointing"""
-#     def __init__(self, vocab_size, decoder_config, dropout):
-#         super(Generator, self).__init__()
-#         self.decoder = tx.modules.BasicRNNDecoder(vocab_size=vocab_size,
-#                                                   hparams=decoder_config,
-#                                                   cell_dropout_mode=dropout)
 
 class Generator(tf.keras.Model):
     """Generator wrapper for checkpointing"""
@@ -39,12 +31,6 @@ class Generator(tf.keras.Model):
         self.word_embedder = self.decoder.word_embedder
         self.position_embedder = self.decoder.position_embedder
 
-# class RNNDiscriminator(tf.keras.Model):
-#     """Discriminator wrapper"""
-#     def __init__(self, disc_config, dropout):
-#         super(RNNDiscriminator, self).__init__()
-#         self.encoder = tx.modules.UnidirectionalRNNEncoder(
-#             hparams = disc_config['rnn_encoder'], cell_dropout_mode=dropout)
 
 class Discriminator(tf.keras.Model):
     """Discriminator wrapper"""
@@ -59,11 +45,6 @@ class Discriminator(tf.keras.Model):
         self.word_embedder = self.encoder.word_embedder
         self.position_embedder = self.encoder.position_embedder
             
-# class RNNClassifier(tf.keras.Model):
-#     def __init__(self, class_config, dropout):
-#         super(RNNClassifier, self).__init__()
-#         self.encoder = tx.modules.UnidirectionalRNNEncoder(
-#             hparams = class_config['encoder'], cell_dropout_mode=dropout)
 
 class Classifier(tf.keras.Model):
     def __init__(self, class_config):
@@ -76,32 +57,6 @@ class Classifier(tf.keras.Model):
             encode_mode=True)
         self.word_embedder = self.encoder.word_embedder
         self.position_embedder = self.encoder.position_embedder
-
-
-class Embedder(tf.keras.Model):
-    def __init__(self,vocab_size, emb_config):
-        super(Embedder, self).__init__()
-        self.embedder = tx.modules.WordEmbedder(vocab_size=vocab_size,
-                                        hparams=emb_config["word_embedder"])
-        
-class GPT2Embedder(tf.keras.Model):
-    def __init__(self, gpt2_emb_config):
-        super(GPT2Embedder, self).__init__()
-        self.gpt2_emb_model = GPT2Decoder(hparams=gpt2_emb_config["gpt2_decoder"])
-        self.embedder = self.gpt2_emb_model.embeddings()
-        
-        self.word_embedder = self.gpt2_emb_model.word_embedder
-        self.position_embedder = self.gpt2_emb_model.position_embedder
-        
-
-class RNNCritic(tf.keras.Model):
-    def __init__(self, crit_config):
-        super(RNNCritic, self).__init__()
-        self.rec = tf.keras.layers.CuDNNGRU(**crit_config['rec'], return_sequences=True)
-        self.dense = tf.keras.layers.TimeDistributed(tf.keras.layers.Dense(**cric_config['dense']))
-        
-    def call(x):
-        pass
 
 
 def get_logger(log_dir):
@@ -123,10 +78,9 @@ class fakelogger():
             f.write(m + '\n')
 
 
-
-
 def get_size(sup_dataset, unsup_dataset=None):
     return sup_dataset.dataset_size()
+
 
 def print_out_array(header_names, value_lists, logger, final_line=None):
     header_format_string = ''.join(['{:<13}'] * len(header_names))
@@ -144,10 +98,6 @@ def print_out_array(header_names, value_lists, logger, final_line=None):
         logger.debug(format_string.format(*vals))
     if final_line is not None:
         logger.debug(final_line)
-        
-    
-
-
 
 
 def get_vocab(train_lm_only, d):
@@ -155,7 +105,6 @@ def get_vocab(train_lm_only, d):
         return d.vocab
     else:
         return d.vocab('x')
-    
     
 
 def main(config = None):
@@ -171,17 +120,10 @@ def main(config = None):
         
         # Get data
         logger.info("Constructing graph...")
-#         train_data = tx.data.MultiAlignedData(config["train_data)
-#         val_data = tx.data.MultiAlignedData(config["val_data)
-#         test_data = tx.data.MultiAlignedData(config["test_data)
         train_data = MultiAlignedData(config["train_data"])
         val_data = MultiAlignedData(config["val_data"])
         test_data = MultiAlignedData(config["test_data"])
         clas_train_data_hparams = deepcopy(config["train_data"])
-        # Get only the first file, which includes only labeled data.
-#         clas_train_data = tx.data.MultiAlignedData(config["clas_train_data)
-#         clas_val_data = tx.data.MultiAlignedData(config["val_data)
-#         clas_test_data = tx.data.MultiAlignedData(config["test_data)
         clas_train_data = MultiAlignedData(config["clas_train_data"])
         clas_val_data = MultiAlignedData(config["val_data"])
         clas_test_data = MultiAlignedData(config["test_data"])
@@ -225,41 +167,25 @@ def main(config = None):
         
         logger.info("Building model components...")
         
-        # Embeddings
-#         emb_model = Embedder(vocab_size, config["emb_hparams)
-#         emb_model = GPT2Embedder(config["gpt2_emb_hparams)
-        
         # Generator
-#         gen_model = Generator(vocab_size, config["gen_hparams["rnn_decoder"], generator_dropout)
         generator_dropout = tf.placeholder(tf.string)
         gen_model = Generator(config["gen_hparams"])
         g_decoder = gen_model.decoder
-#         initial_state = g_decoder.zero_state(batch_size = batch_size,
-#                                              dtype=tf.float32)
+        gen_dropout_layer = tf.keras.layers.Dropout(rate=0.5)
 
         # Discriminator
-#         if config["disc_has_own_embedder:
-#             disc_embedder_model = Embedder(vocab_size, config["disc_emb_hparams)
-#             disc_embedder = disc_embedder_model.embedder
-#         else:
-#             disc_embedder = embedder
-            
         discriminator_dropout = tf.placeholder(dtype=tf.string)
         disc_model = Discriminator(config["disc_hparams"])
         discriminator = disc_model.encoder
         disc_embedder = discriminator.embeddings()
+        disc_dropout_layer = tf.keras.layers.Dropout(rate=0.5)
 
         # Classifier
-#         if config["clas_has_own_embedder: 
-#             clas_emb_model = Embedder(vocab_size, config["clas_emb_hparams)
-#             clas_embedder = clas_emb_model.embedder
-#         else:
-#             clas_embedder = embedder
-
         classifier_dropout = tf.placeholder(dtype=tf.string)
         clas_model = Classifier(config["clas_hparams"])
         classifier = clas_model.encoder
         clas_embedder = classifier.embeddings()
+        clas_dropout_layer = tf.keras.layers.Dropout(rate=0.5)
 
         # Critics
         disc_crit_layer = tf.layers.Dense(**config["disc_crit_hparams"])
@@ -270,9 +196,7 @@ def main(config = None):
         logger.info("Creating Generator MLE training subgraph...")
         # Pre-train Generator subgraph
         with g.name_scope('gen_mle'):
-#             inp_emb = embedder(inp, mode=generator_dropout)
             x = inp[:, 0:(tf.shape(inp)[1]-2)]
-#             x_emb = embedder(x, mode=generator_dropout)
             y = inp[:, 1:(tf.shape(inp)[1]-1)]
             y_onehot = tf.one_hot(y, vocab_size)
             
@@ -283,22 +207,11 @@ def main(config = None):
             context = tf.random.normal((batch_size, context_size))
             reclass_unlab = tf.zeros_like(all_data_labels, dtype=tf.float32)
             true_classes = tf.where(labeled, tf.cast(all_data_labels, tf.float32), reclass_unlab)
-#             context = tf.concat([context, tf.expand_dims(true_classes, -1)], axis=1)
-#             tiled_context = tf.reshape(
-#                 tf.tile(context, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size + 1])
             tiled_true_classes = tf.tile(tf.expand_dims(true_classes, -1), [1, class_size]) # Increase the possibility of exposure
             context = tf.concat([context, tiled_true_classes], axis=1)
             tiled_context = tf.reshape(
                 tf.tile(context, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size + class_size])
-#             x_emb_context = tf.concat([x_emb, tiled_context], axis = -1)
-            
-#             outputs_mle, _, _ = g_decoder(
-#                 initial_state=initial_state, 
-#                 decoding_strategy='train_greedy',
-#                 embedding=None,
-#                 inputs=x_emb_context,
-#                 mode=generator_dropout,
-#                 sequence_length=x_lengths)
+
             
             outputs_mle = g_decoder(
                 decoding_strategy='train_greedy',
@@ -321,7 +234,6 @@ def main(config = None):
                 )
             loss_mle = tf.reduce_mean(loss_mle_full)
             
-#             g_variables = tx.utils.collect_trainable_variables([embedder, g_decoder])
             
             mle_optimizer = tx.core.get_optimizer(global_step=global_step,
                                                   hparams=config["g_opt_mle_hparams"])
@@ -371,27 +283,16 @@ def main(config = None):
             random_context = tf.random.normal([batch_size, config["noise_size"]])
             class_prior = tf.distributions.Bernoulli(probs=config["prior_prob"])
             random_classes = class_prior.sample((batch_size, 1))
-#             random_vector = tf.concat([random_context, 
-#                                        tf.cast(random_classes, tf.float32)], 
-#                                       axis=-1)
             tiled_random_classes = tf.tile(random_classes, [1, class_size]) # Increase the possibility of exposure
             random_vector = tf.concat([random_context, 
                                        tf.cast(tiled_random_classes, tf.float32)], 
                                        axis=-1)
             random_class_onehots = tf.one_hot(random_classes, 2, axis=-1)
             end_token = vocab.eos_token_id
-            softmax_temperature = tf.constant(config["sampling_temperature"], dtype=tf.float32)
-#             context_helper = custom_helpers.ContextSampleEmbeddingHelper(
-#                 embedder, random_vector, start_tokens, end_token, softmax_temperature)
-           
-#             gen_outputs, _, gen_lengths = g_decoder(
-#                 helper=context_helper,
-#                 mode=generator_dropout,
-#                 initial_state=initial_state,
-#                 max_decoding_length=max_length)
-           
+            
             # Specify sample strategy
             sample_strategy = config["sample_strategy"]
+            softmax_temperature = tf.constant(config["sampling_temperature"], dtype=tf.float32)
             logger.info("Sampling using strategy: {}...".format(sample_strategy))
             
             # Obtain lengths of generated sentences 
@@ -563,8 +464,7 @@ def main(config = None):
             fake_seq = gen_sample_ids
             real_seq = inp[:, 1:-1] # remove BOS EOS token as fake does not have.
             real_seq_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(real_seq)[1])
-#             real_inp = disc_embedder(real_seq, mode=discriminator_dropout)
-#             fake_inp = disc_embedder(fake_seq, mode=discriminator_dropout)
+            
             r_disc_pos_init_time = tf.expand_dims(tf.range(tf.shape(real_seq)[1]), 0)
             r_disc_pos_init_time = tf.broadcast_to(
                 r_disc_pos_init_time, [tf.shape(real_seq)[0], tf.shape(real_seq)[1]])
@@ -615,18 +515,9 @@ def main(config = None):
                     tf.multiply(1/real_seq_lengths_reshape , r_nsteps)
                 f_progress_vector = tf.clip_by_value(f_progress_vector, 0, 1e8)
                 r_progress_vector = tf.clip_by_value(r_progress_vector, 0, 1e8)
-#                 real_inp = tf.concat([real_inp, r_progress_vector], axis = -1)
-#                 fake_inp = tf.concat([fake_inp, f_progress_vector], axis = -1)
                 real_inp = tf.concat([real_inp[:, :, :-1], r_progress_vector], axis = -1)
                 fake_inp = tf.concat([fake_inp[:, :, :-1], f_progress_vector], axis = -1)
                 
-                
-#             r_disc_q_logit, _, r_disc_cell_outputs = discriminator(
-#                 real_inp, sequence_length=real_seq_lengths, return_cell_output=True,
-#                 mode=discriminator_dropout)
-#             f_disc_q_logit, _, f_disc_cell_outputs = discriminator(
-#                 fake_inp, sequence_length=gen_lengths, mode=discriminator_dropout,
-#                 return_cell_output=True)
 
             r_disc_outputs = discriminator(
                 decoding_strategy='train_greedy',
@@ -646,24 +537,8 @@ def main(config = None):
             f_disc_q_logit = f_disc_outputs.logits
             f_disc_cell_outputs = f_disc_outputs.cell_outputs
 
-#             r_disc_cell_outputs = discriminator(
-#                 inputs=real_inp,
-#                 sequence_length=real_seq_lengths,
-#                 mode=discriminator_dropout,
-#                 )
-#             f_disc_cell_outputs = discriminator(
-#                 inputs=fake_inp,
-#                 sequence_length=gen_lengths,
-#                 mode=discriminator_dropout,
-#                 )
-
-            # Determine two different kinds of outputs
-#             r_disc_q_logit = disc_logits_output_layer(r_disc_cell_outputs)
-#             f_disc_q_logit = disc_logits_output_layer(f_disc_cell_outputs)
-
             
-            r_disc_qvalues = tf.math.sigmoid(r_disc_q_logit)
-            f_disc_qvalues = tf.math.sigmoid(f_disc_q_logit)
+            
             r_disc_q_logit_sq = tf.squeeze(r_disc_q_logit)
             f_disc_q_logit_sq = tf.squeeze(f_disc_q_logit)
             r_disc_score = tx.losses.mask_and_reduce(r_disc_q_logit_sq,
@@ -679,9 +554,7 @@ def main(config = None):
                                               sum_over_batch=False,
                                               sum_over_timesteps=False)
 
-#             r_disc_score = r_disc_q_logit_sq[:, -1]
-#             f_disc_score = f_disc_q_logit_sq[:, -1]
-                                              
+
 
             r_disc_score = tf.expand_dims(r_disc_score, 1)
             f_disc_score = tf.expand_dims(f_disc_score, 1)
@@ -698,10 +571,10 @@ def main(config = None):
                 label_smoothing = config["disc_label_smoothing_epsilon"],
                 reduction=tf.losses.Reduction.MEAN)
             disc_loss = r_disc_loss + f_disc_loss
-            #disc_loss.set_shape(())
             disc_loss.set_shape(disc_loss.shape)
-#             if config["let_discriminator_train_embedder:
-            d_variables = tx.utils.collect_trainable_variables([discriminator])
+            
+            
+            d_variables = tx.utils.collect_trainable_variables([discriminator, disc_dropout_layer])
                 
             disc_optimizer = tx.core.get_optimizer(hparams=config["d_opt_hparams"])
 
@@ -742,7 +615,9 @@ def main(config = None):
 
 
             r_probs = tf.math.sigmoid(r_disc_score)
+            r_probs = disc_dropout_layer(r_probs, is_train_mode(discriminator_dropout))
             f_probs = tf.math.sigmoid(f_disc_score)
+            f_probs = disc_dropout_layer(f_probs, is_train_mode(discriminator_dropout))
             r_preds = tf.cast(tf.round(r_probs), tf.int32)
             f_preds = tf.cast(tf.round(f_probs), tf.int32)
             mean_r_disc_score = tf.reduce_mean(r_disc_score)
@@ -782,8 +657,7 @@ def main(config = None):
 
             # Designate clas input
             real_label_inp = label_inp[:, 1:-1]
-#             real_label_inp_emb = clas_embedder(real_label_inp, mode=classifier_dropout)
-#             fake_label_inp_emb = clas_embedder(fake_seq, mode=classifier_dropout)
+            
             r_clas_pos_init_time = tf.expand_dims(tf.range(tf.shape(real_label_inp)[1]), 0)
             r_clas_pos_init_time = tf.broadcast_to(
                 r_clas_pos_init_time, [tf.shape(real_label_inp)[0], tf.shape(real_label_inp)[1]])
@@ -797,14 +671,8 @@ def main(config = None):
             real_label_inp_emb = real_label_inp_emb[:, :max_length, :]
             label_seq_lengths = tf.clip_by_value(label_seq_lengths, 0, max_length)
 
-            # Pass through classifier
-#             r_clas_q_logit, _, r_clas_cell_outputs = classifier(
-#                 real_label_inp_emb, sequence_length= label_seq_lengths,
-#                 mode=classifier_dropout, return_cell_output=True)
-#             f_clas_q_logit, _, f_clas_cell_outputs = classifier(
-#                 fake_label_inp_emb, sequence_length = gen_lengths,
-#                 mode=classifier_dropout, return_cell_output=True)
 
+            # Pass through classifier
             r_clas_outputs = classifier(
                 decoding_strategy='train_greedy',
                 inputs=real_label_inp_emb,
@@ -823,20 +691,7 @@ def main(config = None):
             f_clas_q_logit = f_clas_outputs.logits
             f_clas_cell_outputs = f_clas_outputs.cell_outputs
             
-#             r_clas_cell_outputs = classifier(
-#                 inputs=real_label_inp_emb,
-#                 sequence_length=label_seq_lengths,
-#                 mode=classifier_dropout,
-#                 )
-#             f_clas_cell_outputs = classifier(
-#                 inputs=fake_label_inp_emb,
-#                 sequence_length=gen_lengths,
-#                 mode=classifier_dropout,
-#                 )
 
-            # Determine two different kinds of outputs
-#             r_clas_q_logit = clas_logits_output_layer(r_clas_cell_outputs)
-#             f_clas_q_logit = clas_logits_output_layer(f_clas_cell_outputs)
 
             r_clas_q_logit_sq = tf.squeeze(r_clas_q_logit)
             f_clas_q_logit_sq = tf.squeeze(f_clas_q_logit)
@@ -854,12 +709,8 @@ def main(config = None):
                                               sum_over_batch=False,
                                               sum_over_timesteps=False)
             
-#             r_clas_score = r_clas_q_logit_sq[:, -1]
-#             f_clas_score = f_clas_q_logit_sq[:, -1]
             
             
-            r_clas_qvalues = tf.math.sigmoid(r_clas_q_logit)
-            f_clas_qvalues = tf.math.sigmoid(f_clas_q_logit)
             random_class_labels = tf.squeeze(tf.cast(random_classes, tf.float32))
             r_clas_loss = tf.losses.sigmoid_cross_entropy(
                 logits=r_clas_score, 
@@ -889,10 +740,9 @@ def main(config = None):
 
 
                     
-            #clas_loss.set_shape(())
             clas_loss.set_shape(clas_loss.shape)
 
-            c_variables = tx.utils.collect_trainable_variables([classifier])
+            c_variables = tx.utils.collect_trainable_variables([classifier, clas_dropout_layer])
                 
             clas_optimizer = tx.core.get_optimizer(hparams=config["c_opt_hparams"])
             clas_train_op = clas_optimizer.minimize(clas_loss,
@@ -933,22 +783,13 @@ def main(config = None):
             
 
             r_probs = tf.math.sigmoid(r_clas_score)
+            r_probs = clas_dropout_layer(r_probs, is_train_mode(classifier_dropout))
             f_probs = tf.math.sigmoid(f_clas_score)
+            f_probs = clas_dropout_layer(f_probs, is_train_mode(classifier_dropout))
             r_clas_preds = tf.cast(tf.round(r_probs), tf.int32)
             f_clas_preds = tf.cast(tf.round(f_probs), tf.int32)
             random_class_labels_ints = tf.cast(random_class_labels, tf.int32)
-#             r_clas_acc = tf.contrib.metrics.accuracy(
-#                 r_clas_preds, data_labels)
-#             f_clas_acc = tf.contrib.metrics.accuracy(
-#                 f_clas_preds, random_class_labels_ints)
-#             r_clas_prec = tf.reduce_mean(tf.metrics.precision(
-#                 r_clas_preds, data_labels))
-#             f_clas_prec = tf.reduce_mean(tf.metrics.precision(
-#                 f_clas_preds, random_class_labels_ints))
-#             r_clas_recl = tf.reduce_mean(tf.metrics.recall(
-#                 r_clas_preds, data_labels))
-#             f_clas_recl = tf.reduce_mean(tf.metrics.recall(
-#                 f_clas_preds, random_class_labels))
+
             r_clas_acc = tf.reduce_mean(tf.contrib.metrics.accuracy(
                 predictions=r_clas_preds, labels=data_labels))
             f_clas_acc = tf.reduce_mean(tf.contrib.metrics.accuracy(
@@ -1125,9 +966,7 @@ def main(config = None):
                 sum_over_timesteps=False)
             
             
-#             pg_loss.set_shape(())
             pg_loss.set_shape((pg_loss.shape))
-#             pg_variables = tx.utils.collect_trainable_variables([g_decoder, embedder])
 
             if config["is_gpt2_trainable"] is True:
                 pg_variables = tx.utils.collect_trainable_variables([g_decoder])
@@ -1151,13 +990,12 @@ def main(config = None):
             pg_loss_sd = tf.reduce_mean(tf.square(pg_loss_full)- tf.square(pg_loss))
             
             # Rank of pg_loss must be 0
-            pg_loss_reduce_mean = tf.reduce_mean(pg_loss)
+            pg_loss = tf.reduce_mean(pg_loss)
             
             tf.summary.scalar('mean_reward', mean_reward)
             tf.summary.scalar('mean_adv', mean_adv)
             tf.summary.scalar('adv_sd', adv_sd)
-            #tf.summary.scalar('pg_loss', pg_loss)
-            tf.summary.scalar('pg_loss', pg_loss_reduce_mean)
+            tf.summary.scalar('pg_loss', pg_loss)
             tf.summary.scalar('pg_loss_sd', pg_loss_sd)
             tf.summary.scalar('mean_logit_gen', mean_logit_gen)
             tf.summary.scalar('mean_log_prob', mean_log_prob)
@@ -1258,8 +1096,7 @@ def main(config = None):
                         'mean_adv' : mean_adv,
                         'batch_size' : batch_size,
                         'mean_reward' : mean_reward,
-                        #'loss' : pg_loss,
-                        'loss' : pg_loss_reduce_mean,
+                        'loss' : pg_loss,
                         'train_op' : pg_train_op,
                         'global_step' : global_step,
                     }
@@ -1361,8 +1198,6 @@ def main(config = None):
                 end_time = time.time()
                 per_step_time = round(end_time - start_time, 2)
                 total_runtime = total_runtime + per_step_time
-#                 progbar.update(nexamples,
-#                                [('loss', loss), ('batch_time', per_step_time)]) 
                 progbar.update(nexamples,[('loss', loss), 
                                           ('batch_time', per_step_time), 
                                           ("total_runtime", total_runtime)]) 
@@ -1373,11 +1208,10 @@ def main(config = None):
                 trying_unsup=False
                 break
         if mode_string == 'test':
-#             return {'perp' : total_perp/nexamples, 'loss' : total_loss/nexamples}
             return {'perp' : total_perp/nexamples, 
                     'loss' : total_loss/nexamples, 
                     "total_runtime": total_runtime}
-#         return {'loss' : total_loss/nexamples}
+            
         return {'loss' : total_loss/nexamples, "total_runtime": total_runtime}
 
     def disc_run_epoch(sess, mode_string, writer, disc_step):
@@ -1508,8 +1342,6 @@ def main(config = None):
                 end_time = time.time()
                 per_step_time = round(end_time - start_time, 2)
                 total_runtime = total_runtime + per_step_time
-#                 progbar.update(nexamples,
-#                                [('loss', loss), ('batch_time', per_step_time), ('acc', acc)]) 
                 progbar.update(nexamples, [('loss', loss), 
                                            ('batch_time', per_step_time), 
                                            ('acc', acc),
@@ -1517,7 +1349,6 @@ def main(config = None):
             except tf.errors.OutOfRangeError:
                 break
         
-#         return {'loss' : total_loss/nexamples, 'acc' : total_acc/nexamples, 'step' : disc_step}
         return {'loss' : total_loss/nexamples, 
                 'acc' : total_acc/nexamples, 
                 'step' : disc_step,
@@ -1546,9 +1377,6 @@ def main(config = None):
             nounsup_iterator.switch_to_test_data(sess)
             size = get_size(test_data)
             test_sent_count = 0
-#             total_real_f1 = 0
-#             total_real_prec = 0
-#             total_real_recl = 0
             total_real_tp = 0
             total_real_tn = 0
             total_real_fp = 0
@@ -1769,9 +1597,6 @@ def main(config = None):
                     total_fake_acc = 0
 #                 if mode_string == 'test':
                 if mode_string == 'test':
-#                     total_real_f1 = rtns['r_clas_f1'] * rtns['batch_size']
-#                     total_real_prec = rtns['r_clas_prec'] * rtns['batch_size']
-#                     total_real_recl = rtns['r_clas_recl'] * rtns['batch_size']
                     total_real_tp += rtns["r_tp"]
                     total_real_tn += rtns["r_tn"]
                     total_real_fp += rtns["r_fp"]
@@ -1788,16 +1613,11 @@ def main(config = None):
                 per_step_time = round(end_time - start_time, 2)
                 total_runtime = total_runtime + per_step_time
                 if mode_string == 'pretrain':
-#                     progbar.update(nexamples,
-#                                    [('loss', loss), ('batch_time', per_step_time), ('acc', acc)] )
                     progbar.update(nexamples, [('loss', loss), 
                                                ('batch_time', per_step_time), 
                                                ('acc', acc),
                                                ("total_runtime", total_runtime)])
                 else:
-#                     progbar.update(nexamples,
-#                                    [('loss', loss), ('batch_time', per_step_time),
-#                                     ('r_acc', acc), ('f_acc', f_acc)] )
                     progbar.update(nexamples, [('loss', loss), 
                                                ('batch_time', per_step_time),
                                                ('r_acc', acc), 
@@ -1807,19 +1627,13 @@ def main(config = None):
             except tf.errors.OutOfRangeError:
                 break
          
-#         output = {'loss' : total_loss/nexamples, 'real_acc' : total_real_acc/nexamples,
-#                 'fake_acc' : total_fake_acc/nexamples, 'step' : clas_step}
         output = {'loss' : total_loss/nexamples, 
                   'real_acc' : total_real_acc/nexamples,
                   'fake_acc' : total_fake_acc/nexamples, 
                   'step' : clas_step,
                   "total_runtime": total_runtime}
         
-#         if mode_string == 'test':
         if mode_string == 'test':
-#             output['real_recl'] = total_real_recl/nexamples
-#             output['real_f1'] = total_real_f1/nexamples
-#             output['real_prec'] = total_real_prec/nexamples
             if total_real_tp + total_real_fp == 0:
                 real_prec = 0
             else:
@@ -1884,24 +1698,8 @@ def main(config = None):
         # Summaries
         sum_writer = tf.summary.FileWriter(config["log_dir"],graph=g, session=sess, flush_secs=30)
         with sum_writer:
+            
             # Check if testing
-#             if config["clas_test:
-#                 checkpoint.restore(sess, config["clas_test_ckpt)
-#                 outs = clas_run_epoch(sess, 'test', sum_writer, 0)
-#                 logger.info(outs)
-#                 with open(config["clas_pred_output, 'w') as f:
-#                     for p in outs['r_clas_preds']:
-#                         f.write(str(round(p)) + '\n')
-#                 return
-#             if config["gen_test is not None and config["gen_test:
-#                 checkpoint.restore(sess, config["clas_test_ckpt)
-#                 outs = gen_run_epoch(sess, 'test', sum_writer, False)
-#                 print(outs)
-# #                 with open('../../perplexities.txt', 'a') as f:
-#                 with open(config["gen_perp_output, 'a') as f:
-#                     f.write(os.getcwd() + '\n')
-#                     f.write(str(outs['perp']) + '\n')
-#                 return
             if config["gen_clas_test"] is not None and config["gen_clas_test"]:
                 dict_all_res = {}
                 dict_bestclas_pretrain_res = {}
@@ -1968,10 +1766,6 @@ def main(config = None):
             
             for e in range(config["g_pretrain_epochs"]):
                 logger.info('\nGen Pretrain Epoch {}'.format(e))
-#                 if config["g_unlab_every_n > 0:
-#                     train_with_unsup = e % config["g_unlab_every_n == 0
-#                 else:
-#                     train_with_unsup = False
                 train_with_unsup = True
                 gen_rtns = gen_run_epoch(sess, 'pretrain', sum_writer, train_with_unsup)
                 total_runtime = total_runtime + gen_rtns["total_runtime"]
@@ -2002,8 +1796,6 @@ def main(config = None):
             patience = 0
             # Disc Pretraining
             logger.info("\nStarting discriminator pretraining...")
-#             if config["disc_has_own_embedder"] and False:
-#                 sess.run(copy_embedder_weights)
             disc_rtns = {'step' : 0}
             for e in range(config["d_pretrain_epochs"]):
                 logger.info('\nDisc Pretrain Epoch {} '.format(e))
@@ -2063,8 +1855,6 @@ def main(config = None):
             min_loss = 1e8
             patience = 0
             clas_rtns = {'step' : 0, 'real_acc': 0}
-#             if config["clas_has_own_embedder"] and False:
-#                 sess.run(clas_copy_embedder_weights)
             for e in range(config["c_pretrain_epochs"]):
                 logger.info('\nClas Pretrain Epoch {}'.format(e))
                 clas_rtns = clas_run_epoch(sess, 'pretrain', sum_writer, clas_rtns['step'])
@@ -2093,7 +1883,6 @@ def main(config = None):
             breaking_gen_now = True
             
             for e in range(config["adversarial_epochs"]):
-#                 cur_epoch = e + config["g_pretrain_epochs"]
                 cur_epoch = e 
                 # Generator Train
                 logger.info('\nGen Adv-Train Epoch {}'.format(cur_epoch))
