@@ -32,6 +32,7 @@ from pathlib import Path
 from texar.tf.data.data_utils import maybe_download
 
 from custom_texar.custom_transformer_decoders import TransformerDecoder
+from custom_texar.custom_transformer_encoders import TransformerEncoder
 from texar.tf.modules.embedders import PositionEmbedder, WordEmbedder
 
 
@@ -136,17 +137,15 @@ class GPT2Stack():
     def __init__(self,
                  pretrained_model_name="gpt2-small",
                  cache_dir=None,
-                 hparams=None,
-                 encode_mode=False):
+                 hparams=None):
         
-        self._encode_mode = encode_mode
         self._pretrained_model_name = pretrained_model_name
         self._cache_dir = self.download_checkpoint(self._pretrained_model_name, cache_dir)
-        self._hparams = self._transform_config(self._pretrained_model_name, self._cache_dir, self._encode_mode)
-        if hparams is None:
-            self._name = "gpt2_stack"
-        else:
-            self._name = hparams["name"]
+        self._name = hparams["name"] if "name" in hparams.keys() else "gpt2_stack"
+        self._use_transformer_encoder = False if "decoder" in hparams.keys() else True
+        self._encode_mode = hparams["encode_mode"] if "encode_mode" in hparams.keys() else False
+        self._hparams = self._transform_config(self._pretrained_model_name, 
+                                               self._cache_dir, self._use_transformer_encoder, hparams)
         
         with tf.variable_scope(self._name) as vs:
             self.variable_scope = vs
@@ -162,12 +161,16 @@ class GPT2Stack():
                 position_size=self._hparams.position_size,
                 hparams=self._hparams.position_embed)
 
-            # The GPT2 decoder (a TransformerDecoder)
-            self.decoder = TransformerDecoder(
-                vocab_size=self._hparams.vocab_size,
-                output_layer=tf.transpose(self.word_embedder.embedding, (1, 0)),
-                hparams=self._hparams.decoder,
-                encode_mode=self._encode_mode)
+            # GPT2 
+            if self._use_transformer_encoder is False:
+                self.decoder = TransformerDecoder(
+                    vocab_size=self._hparams.vocab_size,
+                    output_layer=tf.transpose(self.word_embedder.embedding, (1, 0)),
+                    hparams=self._hparams.decoder,
+                    encode_mode=self._encode_mode)
+            else:
+                self.encoder = TransformerEncoder(
+                    hparams=self._hparams.encoder)
             
         self._trainable_variables = []
         self._built = False
@@ -184,7 +187,9 @@ class GPT2Stack():
     def embeddings(self):
         return lambda tokens, positions, mode: self.embed_tokens(tokens, positions, mode)
     
-    def _transform_config(self, pretrained_model_name: str, cache_dir: str, encode_mode) -> Dict[str, Any]:
+    def _transform_config(self, pretrained_model_name: str, 
+                          cache_dir: str, use_transformer_encoder: bool, 
+                          hparams: dict) -> Dict[str, Any]:
         info = list(os.walk(cache_dir))
         root, _, files = info[0]
         config_path = None
@@ -204,30 +209,29 @@ class GPT2Stack():
             "context_size": config_gpt["n_ctx"],
             "embedding_size": config_gpt["n_embd"], "embed": {
                 "dim": hidden_dim,
+                "dropout_rate": hparams["embed"]["dropout_rate"],
                 "name": "word_embeddings"
             },
             "position_size": config_gpt["n_ctx"],
             "position_embed": {
                 "dim": hidden_dim,
+                "dropout_rate": hparams["position_embed"]["dropout_rate"],
                 "name": "position_embeddings"
             }
         }
 
-        module_name = "decoder" 
-        embedding_dropout = 0.1 if encode_mode is False else 0.1
-        residual_dropout = 0.1 if encode_mode is False else 0.1
-        multihead_attention_dropout = 0.1 if encode_mode is False else 0.1
+        module_name = "decoder" if use_transformer_encoder is False else "encoder"
         configs.update({module_name: {
             "dim": hidden_dim,
             "num_blocks": config_gpt["n_layer"],
-            "embedding_dropout": embedding_dropout,
-            "residual_dropout": residual_dropout,
+            "embedding_dropout": hparams[module_name]["embedding_dropout"],
+            "residual_dropout": hparams[module_name]["residual_dropout"],
             "multihead_attention": {
                 "use_bias": True,
                 "num_units": hidden_dim,
                 "num_heads": config_gpt["n_head"],
                 "output_dim": hidden_dim,
-                "dropout_rate": multihead_attention_dropout,
+                "dropout_rate": hparams[module_name]["multihead_attention"]["dropout_rate"],
                 "name": "self"
             },
             "initializer": {
@@ -260,7 +264,13 @@ class GPT2Stack():
                     }
                 ],
             },
-            "name": "decoder"
+            "output_layer": {
+                "units": hparams["output_layer"]["units"],
+                "activation": hparams["output_layer"]["activation"],
+                "dropout_rate": hparams["output_layer"]["dropout_rate"],
+                "name": hparams["output_layer"]["name"]
+            },
+            "name": module_name
         }})
         return tx.HParams(configs, default_hparams=None)
     
@@ -356,14 +366,14 @@ class GPT2Stack():
         return str(cache_path)
     
     def _init_from_checkpoint(self, pretrained_model_name, cache_dir,
-                          scope_name, load_output_layer=True, **kwargs):
+                          scope_name, use_transformer_encoder=False, **kwargs):
         r"""Initialize model parameters from weights stored in the pre-trained
         checkpoint.
 
         Args:
             cache_dir (str): Path to the cache directory.
             scope_name (str): Scope name of the model.
-            load_output_layer (bool): If `False`, will not load weights of the
+            encode_mode (bool): If `False`, will not load weights of the
                 output layer. Set this argument to `False` when loading weights
                 into a GPT2 encoder. Defaults to `True`.
         """
@@ -382,7 +392,7 @@ class GPT2Stack():
                 name = m.group(1)
             name_to_variable[name] = var
 
-        if load_output_layer:
+        if use_transformer_encoder is False:
             global_tensor_map = {
                 'model/wte': scope_name + '/word_embeddings/w',
                 'model/wpe': scope_name + '/position_embeddings/w',
@@ -455,7 +465,7 @@ class GPT2Stack():
 
                 if name in layer_tensor_map:
                     if name == "attn/c_attn/b":
-                        if load_output_layer:
+                        if use_transformer_encoder is False:
                             K = name_to_variable[
                                 scope_name + '/decoder/layer_' + layer_no +
                                 '/self_attention/self/key/bias']
@@ -486,7 +496,7 @@ class GPT2Stack():
                         Q._initializer_op = tf.assign(Q._variable, Q_w)
                         V._initializer_op = tf.assign(V._variable, V_w)
                     elif name == "attn/c_attn/w":
-                        if load_output_layer:
+                        if use_transformer_encoder is False:
                             K = name_to_variable[
                                 scope_name + '/decoder/layer_' + layer_no +
                                 '/self_attention/self/key/kernel']
@@ -574,6 +584,7 @@ class GPT2Stack():
     def __call__(self,
                  decoding_strategy='train_greedy',
                  inputs=None,
+                 sequence_length=None,
                  memory=None,
                  memory_sequence_length=None,
                  memory_attention_bias=None,
@@ -619,26 +630,33 @@ class GPT2Stack():
             if mle_context is not None:
                 inputs = tf.concat([inputs[:, :, :(inputs.shape[-1]-mle_context.shape[-1])], mle_context], axis = -1)
         
-        outputs = self.decoder._build(
-            decoding_strategy=decoding_strategy,
-            inputs=inputs,
-            memory=memory,
-            memory_sequence_length=memory_sequence_length,
-            memory_attention_bias=memory_attention_bias,
-            beam_width=beam_width,
-            length_penalty=length_penalty,
-            start_tokens=start_tokens,
-            end_token=end_token,
-            context=context,
-            context_sequence_length=context_sequence_length,
-            softmax_temperature=softmax_temperature,
-            max_decoding_length=max_decoding_length,
-            impute_finished=impute_finished,
-            embedding=lambda a, b, mode: self.embed_tokens(a, b, mode), # Introduce mode 
-            helper=helper,
-            mode=mode,
-            sample_context=sample_context # spamGAN sample generator context
-            )
+        if self._use_transformer_encoder is False:
+            outputs = self.decoder._build(
+                decoding_strategy=decoding_strategy,
+                inputs=inputs,
+                memory=memory,
+                memory_sequence_length=memory_sequence_length,
+                memory_attention_bias=memory_attention_bias,
+                beam_width=beam_width,
+                length_penalty=length_penalty,
+                start_tokens=start_tokens,
+                end_token=end_token,
+                context=context,
+                context_sequence_length=context_sequence_length,
+                softmax_temperature=softmax_temperature,
+                max_decoding_length=max_decoding_length,
+                impute_finished=impute_finished,
+                embedding=lambda a, b, mode: self.embed_tokens(a, b, mode), # Introduce mode 
+                helper=helper,
+                mode=mode,
+                sample_context=sample_context # spamGAN sample generator context
+                )
+        else:
+            outputs = self.encoder._build(
+                inputs=inputs,
+                sequence_length=sequence_length,
+                mode=mode
+                )
         
         if self._built is False:
             self._add_internal_trainable_variables()
@@ -646,9 +664,9 @@ class GPT2Stack():
             
             self._init_from_checkpoint(
                 self._pretrained_model_name, self._cache_dir, 
-                self.variable_scope.name, load_output_layer=True
+                self.variable_scope.name, encode_mode=self._use_transformer_encoder
                 )
             
-        print("outputs: {}".format(outputs))
+        print(outputs)
         return outputs
     

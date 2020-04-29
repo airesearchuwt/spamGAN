@@ -5,9 +5,9 @@
 
 	
 	"sample_strategy": "infer",
-	"sample_helper": "topk_sample",
+	"sample_helper": "sample",
 	"beam_width": 4,
-	"infer_topk":64,
+	"infer_topk":16,
 	"sampling_temperature": 1.0,
 	
 
@@ -39,7 +39,7 @@
 
 	"g_unlab_every_n": 3,
 	"g_pretrain_epochs": 6,
-	"d_pretrain_epochs": 4,
+	"d_pretrain_epochs": 1,
 	"d_pretrain_critic_epochs": 0,
 	"c_pretrain_epochs": 4,
 	"adversarial_epochs": 5,
@@ -52,7 +52,7 @@
 	"gen_mle_adv_epochs": 1,
 
 	"adv_train_max_gen_examples": 1000,
-	"adv_disc_max_ex": 5000,
+	"adv_disc_max_ex": 1000,
 	"adv_gen_train_with_unsup": false,
 
 
@@ -239,18 +239,21 @@
 
 	"gen_hparams": {
 
-		"gpt2_decoder": {
+		"gpt2_stack": {
+			"encode_mode": false,
 			"pretrained_model_name": "gpt2-small",
 			"vocab_size": 50257,
 			"context_size": 1024,
 			"embedding_size": 768,
 			"embed": {
 				"dim": 768,
+				"dropout_rate": 0.2,
 				"name": "word_embeddings"
 			},
 			"position_size": 1024,
 			"position_embed": {
 				"dim": 768,
+				"dropout_rate": 0.2,
 				"name": "position_embeddings"
 			},
 
@@ -297,6 +300,14 @@
 					"name": "ffn"
 				}
 			},
+			
+			"output_layer": {
+				"units": 1,
+				"activation": "linear",
+				"dropout_rate": 0.2,
+				"name": "gpt2_stack_output"
+			},
+			
 			"name": "generator"
 		}
 	},
@@ -304,18 +315,21 @@
 
 	"disc_hparams": {
 
-		"gpt2_decoder": {
+		"gpt2_stack": {
+			"encode_mode": true,
 			"pretrained_model_name": "gpt2-small",
 			"vocab_size": 50257,
 			"context_size": 1024,
 			"embedding_size": 768,
 			"embed": {
 				"dim": 768,
+				"dropout_rate": 0.4,
 				"name": "word_embeddings"
 			},
 			"position_size": 1024,
 			"position_embed": {
 				"dim": 768,
+				"dropout_rate": 0.4,
 				"name": "position_embeddings"
 			},
 
@@ -362,6 +376,14 @@
 					"name": "ffn"
 				}
 			},
+			
+			"output_layer": {
+				"units": 1,
+				"activation": "linear",
+				"dropout_rate": 0.4,
+				"name": "gpt2_stack_output"
+			},
+			
 			"name": "discriminator"
 		}
 	},
@@ -375,18 +397,21 @@
 
 	"clas_hparams": {
 
-		"gpt2_decoder": {
+		"gpt2_stack": {
+			"encode_mode": true,
 			"pretrained_model_name": "gpt2-small",
 			"vocab_size": 50257,
 			"context_size": 1024,
 			"embedding_size": 768,
 			"embed": {
 				"dim": 768,
+				"dropout_rate": 0.4,
 				"name": "word_embeddings"
 			},
 			"position_size": 1024,
 			"position_embed": {
 				"dim": 768,
+				"dropout_rate": 0.4,
 				"name": "position_embeddings"
 			},
 
@@ -433,6 +458,14 @@
 					"name": "ffn"
 				}
 			},
+			
+			"output_layer": {
+				"units": 1,
+				"activation": "linear",
+				"dropout_rate": 0.4,
+				"name": "gpt2_stack_output"
+			},
+			
 			"name": "classifier"
 		}
 	},

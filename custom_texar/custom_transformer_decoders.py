@@ -113,6 +113,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                  hparams=None,
                  encode_mode=False):
         ModuleBase.__init__(self, hparams)
+        self._encode_mode = encode_mode
 
         with tf.variable_scope(self.variable_scope):
             if self._hparams.initializer:
@@ -120,19 +121,26 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     layers.get_initializer(self._hparams.initializer))
 
             # Make the output layer
-            if encode_mode is False:
+            if self._encode_mode is False:
                 self._output_layer, self._vocab_size = _make_output_layer(
                     output_layer, vocab_size, self._hparams.output_layer_bias,
                     self.variable_scope)
+                self._dropout_layer = tf.layers.Dropout(
+                    rate=self._hparams["output_layer"]["dropout_rate"],
+                    name="{}_{}".format(self._hparams["output_layer"]["name"], "dropout"))
             else:
                 self._vocab_size = vocab_size
                 with tf.variable_scope(self.variable_scope):
                     _output_layer = tf.layers.Dense(
-                        units=1, 
-                        activation="linear",
-                        name="gpt2_encode_logits")
+                        units=self._hparams["output_layer"]["units"], 
+                        activation=self._hparams["output_layer"]["activation"],
+                        name=self._hparams["output_layer"]["name"]
+                        )
                 self._output_layer = _output_layer
-
+                self._dropout_layer = tf.layers.Dropout(
+                    rate=self._hparams["output_layer"]["dropout_rate"],
+                    name="{}_{}".format(self._hparams["output_layer"]["name"], "dropout"))
+                
             # Make attention and poswise networks
             self.multihead_attentions = {
                 'self_att': [],
@@ -183,7 +191,6 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             self._helper = None
             self._cache = None
             self.max_decoding_length = None
-            self.encode_mode = encode_mode
 
     @staticmethod
     def default_hparams():
@@ -284,6 +291,12 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 'use_bias': False,
             },
             "initializer": None,
+            "output_layer": {
+                "units": 1,
+                "activation": "linear",
+                "dropout_rate": 0.1,
+                "name": "gpt2_stack_output"
+            },
             "name": "transformer_decoder",
         }
 
@@ -526,11 +539,6 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         else:
             self.context = None
             
-        if self.encode_mode is False: # Add dropout layer for generation
-            self.dropout_layer = tf.keras.layers.Dropout(rate=0.1)
-        else: # Add dropout layer for classification
-            self.dropout_layer = tf.keras.layers.Dropout(rate=0.5)
-            
         self.embedding = embedding
         self.mode = mode
         self.softmax_temperature = softmax_temperature
@@ -564,9 +572,9 @@ class TransformerDecoder(ModuleBase, TFDecoder):
 #                     sample_id=preds
 #                 )
             logits = self._output_layer(decoder_output)
-            logits = self.dropout_layer(logits, is_train_mode(mode))
+            logits = self._dropout_layer(logits, is_train_mode(mode))
             
-            if self.encode_mode is False:
+            if self._encode_mode is False:
                 if decoding_strategy == "train_greedy":
                     preds = tf.cast(tf.argmax(logits, axis=-1), tf.int32)
                 else: # Train-sample decoding
@@ -612,7 +620,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 
                 # Check if Gumbel-Softmax sampling
                 logits = outputs.logits
-                logits = self.dropout_layer(logits, is_train_mode(mode))
+                logits = self._dropout_layer(logits, is_train_mode(mode))
                 try:
                     tf.shape(outputs.sample_id)[2]
                 except ValueError:
@@ -674,7 +682,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     length_penalty=length_penalty,
                     decode_length=max_decoding_length,
                 )
-                logits = self.dropout_layer(logits, is_train_mode(mode))
+                logits = self._dropout_layer(logits, is_train_mode(mode))
                 
                 sample_id_sampler = tf.distributions.Categorical(logits=logits)
                 sample_id = sample_id_sampler.sample(seed=None)

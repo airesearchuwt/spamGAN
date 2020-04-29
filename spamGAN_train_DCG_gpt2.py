@@ -22,12 +22,7 @@ class Generator(tf.keras.Model):
     """Generator wrapper for checkpointing"""
     def __init__(self, gen_config):
         super(Generator, self).__init__()
-#         self.decoder = GPT2Decoder(
-#             hparams=gen_config["gpt2_decoder"],
-#             encode_mode=False)
-        self.decoder = GPT2Stack(
-            hparams=gen_config["gpt2_decoder"],
-            encode_mode=False)
+        self.decoder = GPT2Stack(hparams=gen_config["gpt2_stack"])
         self.word_embedder = self.decoder.word_embedder
         self.position_embedder = self.decoder.position_embedder
 
@@ -36,12 +31,7 @@ class Discriminator(tf.keras.Model):
     """Discriminator wrapper"""
     def __init__(self, disc_config):
         super(Discriminator, self).__init__()
-#         self.encoder = GPT2Decoder(
-#             hparams=disc_config["gpt2_decoder"],
-#             encode_mode=True)
-        self.encoder = GPT2Stack(
-            hparams=disc_config["gpt2_decoder"],
-            encode_mode=True)
+        self.encoder = GPT2Stack(hparams=disc_config["gpt2_stack"])
         self.word_embedder = self.encoder.word_embedder
         self.position_embedder = self.encoder.position_embedder
             
@@ -49,12 +39,7 @@ class Discriminator(tf.keras.Model):
 class Classifier(tf.keras.Model):
     def __init__(self, class_config):
         super(Classifier, self).__init__()
-#         self.encoder = GPT2Decoder(
-#             hparams=class_config["gpt2_decoder"],
-#             encode_mode=True)
-        self.encoder = GPT2Stack(
-            hparams=class_config["gpt2_decoder"],
-            encode_mode=True)
+        self.encoder = GPT2Stack(hparams=class_config["gpt2_stack"])
         self.word_embedder = self.encoder.word_embedder
         self.position_embedder = self.encoder.position_embedder
 
@@ -400,8 +385,8 @@ def main(config = None):
                     )
                 
                 if beam_width == 1:
-                    gen_logits = gen_outputs.logits # Only take the best beam
-                    gen_sample_ids = gen_outputs.sample_id # Only take the best beam
+                    gen_logits = gen_outputs.logits # Only best beam streamed out 
+                    gen_sample_ids = gen_outputs.sample_id # Only best beam streamed out 
                 else:
                     gen_logits = gen_outputs.logits[:, :, 0, :] # Only take the best beam
                     gen_sample_ids = gen_outputs.sample_id[:, :, 0] # Only take the best beam
