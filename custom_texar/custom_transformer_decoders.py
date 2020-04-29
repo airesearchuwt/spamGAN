@@ -49,6 +49,7 @@ from texar.tf.modules.decoders.dynamic_decode import dynamic_decode
 
 __all__ = [
     "TransformerDecoderOutput",
+    "TransformerDecoderEncodeOutput",
     "TransformerDecoder"
 ]
 
