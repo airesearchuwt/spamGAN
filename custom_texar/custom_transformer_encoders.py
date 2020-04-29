@@ -19,6 +19,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import collections
 import tensorflow as tf
 
 from texar.tf.core import layers
@@ -110,6 +111,19 @@ def default_transformer_poswise_net_hparams(output_dim=512):
     }
 
 
+class TransformerEncoderOutput(collections.namedtuple(
+        "TransformerDecoderEncodeOutput",
+        ("logits", "cell_outputs"))):
+    """The output of :class:`TransformerDecoder`.
+
+    Attributes:
+        logits: A float Tensor of shape
+            `[batch_size, max_time, vocab_size]` containing the logits.
+        sample_id: An int Tensor of shape `[batch_size, max_time]`
+            containing the sampled token indexes.
+    """
+
+
 class TransformerEncoder(EncoderBase):
     """Transformer encoder that applies multi-head self attention for encoding
     sequences.
@@ -141,6 +155,15 @@ class TransformerEncoder(EncoderBase):
             if self._hparams.initializer:
                 tf.get_variable_scope().set_initializer(
                     layers.get_initializer(self._hparams.initializer))
+                
+            self._output_layer = tf.layers.Dense(
+                units=self._hparams["output_layer"]["units"], 
+                activation=self._hparams["output_layer"]["activation"],
+                name=self._hparams["output_layer"]["name"]
+                )
+            self._dropout_layer = tf.layers.Dropout(
+                rate=self._hparams["output_layer"]["dropout_rate"],
+                name="{}_{}".format(self._hparams["output_layer"]["name"], "dropout"))
 
             self.multihead_attention_list = []
             self.poswise_networks = []
@@ -266,6 +289,12 @@ class TransformerEncoder(EncoderBase):
                 'use_bias': False,
             },
             'initializer': None,
+            "output_layer": {
+                "units": 1,
+                "activation": "linear",
+                "dropout_rate": 0.1,
+                "name": "gpt2_stack_output"
+            },
             'name': 'transformer_encoder',
         }
 
@@ -326,7 +355,6 @@ class TransformerEncoder(EncoderBase):
             pad_remover = transformer_utils.PadRemover(inputs_padding)
 
         for i in range(self._hparams.num_blocks):
-#             with tf.variable_scope("layer_{}".format(i)):
             with tf.variable_scope("layer_{}".format(i)) as layer_scope:
                 multihead_attention = self.multihead_attention_list[i]
 
@@ -350,15 +378,12 @@ class TransformerEncoder(EncoderBase):
                 x = x + attention_output
                 with tf.variable_scope('output') as output_scope:
                     if self._hparams.use_bert_config:
-#                         x = layers.layer_normalize(x)
                         x = _layer_norm(x, output_scope)
                         y = x
                     else:
-#                         y = layers.layer_normalize(x)
                         y = _layer_norm(x, output_scope)
 
                 poswise_network = self.poswise_networks[i]
-#                 with tf.variable_scope(poswise_network.variable_scope):
                 with tf.variable_scope(poswise_network.variable_scope) as poswise_network_scope:
                     original_shape = shape_list(y)
                     y = tf.reshape(y, [-1, self._hparams.dim])
@@ -380,14 +405,21 @@ class TransformerEncoder(EncoderBase):
 
                     x = x + sub_output
                     if self._hparams.use_bert_config:
-#                         x = layers.layer_normalize(x)
                         x = _layer_norm(x, scope=poswise_network_scope)
 
         if not self._hparams.use_bert_config:
             x = layers.layer_normalize(x)
-
+        
+        logits = self._dropout_layer(
+            self._output_layer(x), is_train_mode(mode))
+        
+        rets = TransformerEncoderOutput(
+            logits=logits,
+            cell_outputs=x
+            )
+        
         if not self._built:
             self._add_internal_trainable_variables()
             self._built = True
-
-        return x
+        
+        return rets

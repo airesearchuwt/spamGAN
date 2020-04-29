@@ -10,7 +10,7 @@
 
 	"restore_model": false,
 	"clear_run_logs": false,
-	"log_dir": "/home/hanfeiyu/Pretrained-spamGAN/ckpt/",
+	"log_dir": "/home/hanfeiyu/Pretrained-spamGAN/ckpt",
 	"checkpoint_dir": "/home/hanfeiyu/Pretrained-spamGAN/ckpt",
 	"load_checkpoint_file": null,
 

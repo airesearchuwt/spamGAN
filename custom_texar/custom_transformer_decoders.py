@@ -77,7 +77,6 @@ class TransformerDecoderEncodeOutput(collections.namedtuple(
             containing the sampled token indexes.
     """
 
-
 class TransformerDecoder(ModuleBase, TFDecoder):
     """Transformer decoder that applies multi-head self-attention for
     sequence decoding.
@@ -130,13 +129,11 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     name="{}_{}".format(self._hparams["output_layer"]["name"], "dropout"))
             else:
                 self._vocab_size = vocab_size
-                with tf.variable_scope(self.variable_scope):
-                    _output_layer = tf.layers.Dense(
-                        units=self._hparams["output_layer"]["units"], 
-                        activation=self._hparams["output_layer"]["activation"],
-                        name=self._hparams["output_layer"]["name"]
-                        )
-                self._output_layer = _output_layer
+                self._output_layer = tf.layers.Dense(
+                    units=self._hparams["output_layer"]["units"], 
+                    activation=self._hparams["output_layer"]["activation"],
+                    name=self._hparams["output_layer"]["name"]
+                    )
                 self._dropout_layer = tf.layers.Dropout(
                     rate=self._hparams["output_layer"]["dropout_rate"],
                     name="{}_{}".format(self._hparams["output_layer"]["name"], "dropout"))
@@ -327,7 +324,6 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         """
         _batch_size = shape_list(input_ids)[0]
         times = tf.ones([_batch_size], dtype=tf.int32) * step
-#         inputs = self.embedding(input_ids, times)
         inputs = self.embedding(input_ids, times, self.mode)
         inputs = tf.concat(
             [inputs[:, :(inputs.shape[-1]-self.sample_context.shape[-1])], self.sample_context],
@@ -549,10 +545,9 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         else:
             self.sample_context = None
 
-#         if helper is None and beam_width is None and \
-#                 decoding_strategy == 'train_greedy':  # Teacher-forcing
         if helper is None and beam_width is None and \
-                (decoding_strategy == "train_greedy" or decoding_strategy == "train_sample"):  # Teacher-forcing
+                (decoding_strategy == "train_greedy" or \
+                 decoding_strategy == "train_sample"):  # Teacher-forcing
             decoder_self_attention_bias = (
                 attn.attention_bias_lower_triangle(
                     shape_list(inputs)[1]))
@@ -565,14 +560,8 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 cache=None,
                 mode=mode)
             
-#             logits = self._output_layer(decoder_output)
-#                 preds = tf.cast(tf.argmax(logits, axis=-1), tf.int32)
-#                 rets = TransformerDecoderOutput(
-#                     logits=logits,
-#                     sample_id=preds
-#                 )
-            logits = self._output_layer(decoder_output)
-            logits = self._dropout_layer(logits, is_train_mode(mode))
+            logits = self._dropout_layer(
+                self._output_layer(decoder_output), is_train_mode(mode))
             
             if self._encode_mode is False:
                 if decoding_strategy == "train_greedy":
@@ -619,8 +608,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     scope=self.variable_scope)
                 
                 # Check if Gumbel-Softmax sampling
-                logits = outputs.logits
-                logits = self._dropout_layer(logits, is_train_mode(mode))
+                logits = self._dropout_layer(outputs.logits, is_train_mode(mode))
                 try:
                     tf.shape(outputs.sample_id)[2]
                 except ValueError:
@@ -664,17 +652,6 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                                                batch_size=_batch_size)
 
                 # The output format is different when running beam search
-#                 sample_id, log_prob = self._beam_decode(
-#                     start_tokens,
-#                     end_token,
-#                     beam_width=beam_width,
-#                     length_penalty=length_penalty,
-#                     decode_length=max_decoding_length,
-#                 )
-#                 rets = {
-#                     'sample_id': sample_id,
-#                     'log_prob': log_prob
-#                 }
                 _, _, logits = self._beam_decode(
                     start_tokens,
                     end_token,
@@ -844,15 +821,6 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             return self._input_ids_to_outputs(
                 ids[:, -1], step, cache)
             
-#         outputs, log_prob = beam_search.beam_search(
-#             _symbols_to_logits_fn,
-#             start_tokens,
-#             beam_width,
-#             decode_length,
-#             self._vocab_size,
-#             length_penalty,
-#             eos_id=end_token,
-#             states=self._cache)
         outputs, log_prob, logits = custom_beam_search.beam_search(
             _symbols_to_logits_fn,
             start_tokens,
@@ -867,7 +835,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         outputs = outputs[:, :, 1:]
         # shape = [batch_size, seq_length, beam_width]
         outputs = tf.transpose(outputs, [0, 2, 1])
-#         return (outputs, log_prob)
+        
         return (outputs, log_prob, logits)
 
     @property

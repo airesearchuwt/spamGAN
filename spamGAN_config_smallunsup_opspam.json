@@ -4,7 +4,7 @@
 	"is_xlnet_trainable": true,
 
 	
-	"sample_strategy": "infer",
+	"sample_strategy": "train",
 	"sample_helper": "sample",
 	"beam_width": 4,
 	"infer_topk":16,
@@ -300,14 +300,12 @@
 					"name": "ffn"
 				}
 			},
-			
 			"output_layer": {
 				"units": 1,
 				"activation": "linear",
 				"dropout_rate": 0.2,
 				"name": "gpt2_stack_output"
 			},
-			
 			"name": "generator"
 		}
 	},
@@ -333,7 +331,7 @@
 				"name": "position_embeddings"
 			},
 
-			"decoder": {
+			"encoder": {
 				"dim": 768,
 				"num_blocks": 12,
 				"embedding_dropout": 0.1,
@@ -376,14 +374,12 @@
 					"name": "ffn"
 				}
 			},
-			
 			"output_layer": {
 				"units": 1,
 				"activation": "linear",
 				"dropout_rate": 0.4,
 				"name": "gpt2_stack_output"
 			},
-			
 			"name": "discriminator"
 		}
 	},
@@ -415,7 +411,7 @@
 				"name": "position_embeddings"
 			},
 
-			"decoder": {
+			"encoder": {
 				"dim": 768,
 				"num_blocks": 12,
 				"embedding_dropout": 0.1,
@@ -458,14 +454,12 @@
 					"name": "ffn"
 				}
 			},
-			
 			"output_layer": {
 				"units": 1,
 				"activation": "linear",
 				"dropout_rate": 0.4,
 				"name": "gpt2_stack_output"
 			},
-			
 			"name": "classifier"
 		}
 	},

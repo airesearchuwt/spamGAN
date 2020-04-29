@@ -11,9 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+# @Author: Hanfei Yu
+#
+
 from _ast import If
 """
-GPT2 decoders.
+GPT2 stacks.
 """
 
 import os
@@ -373,7 +377,7 @@ class GPT2Stack():
         Args:
             cache_dir (str): Path to the cache directory.
             scope_name (str): Scope name of the model.
-            encode_mode (bool): If `False`, will not load weights of the
+            use_transformer_encoder (bool): If `False`, will not load weights of the
                 output layer. Set this argument to `False` when loading weights
                 into a GPT2 encoder. Defaults to `True`.
         """
@@ -391,7 +395,7 @@ class GPT2Stack():
             if m is not None:
                 name = m.group(1)
             name_to_variable[name] = var
-
+            
         if use_transformer_encoder is False:
             global_tensor_map = {
                 'model/wte': scope_name + '/word_embeddings/w',
@@ -426,17 +430,13 @@ class GPT2Stack():
             global_tensor_map = {
                 'model/wte': scope_name + '/word_embeddings/w',
                 'model/wpe': scope_name + '/position_embeddings/w',
-                'model/ln_f/b': scope_name + '/encoder/LayerNorm/beta',
-                'model/ln_f/g': scope_name + '/encoder/LayerNorm/gamma',
+                'model/ln_f/b': 'LayerNorm/beta',
+                'model/ln_f/g': 'LayerNorm/gamma',
             }
 
             layer_tensor_map = {
-                "ln_1/b": scope_name + '/encoder/layer_{}/LayerNorm/beta',
-                "ln_1/g": scope_name + '/encoder/layer_{}/LayerNorm/gamma',
-                "ln_2/b": scope_name + '/encoder/layer_{}/output/'
-                                       'LayerNorm/beta',
-                "ln_2/g": scope_name + '/encoder/layer_{}/output/'
-                                       'LayerNorm/gamma',
+                "ln_1/b": 'layer_{}/output/beta',
+                "ln_1/g": 'layer_{}/output/gamma',
                 "mlp/c_fc/b": scope_name + '/encoder/layer_{}'
                                            '/ffn/intermediate/bias',
                 "mlp/c_fc/w": scope_name + '/encoder/layer_{}'
@@ -608,7 +608,6 @@ class GPT2Stack():
         it for the detailed usage.
         """
         if inputs is not None:
-#             batch_size, max_time = inputs.shape.as_list()
             # Now support both static and dynamic shape
             batch_size, max_time = None, None
             
@@ -664,7 +663,7 @@ class GPT2Stack():
             
             self._init_from_checkpoint(
                 self._pretrained_model_name, self._cache_dir, 
-                self.variable_scope.name, encode_mode=self._use_transformer_encoder
+                self.variable_scope.name, use_transformer_encoder=self._use_transformer_encoder
                 )
             
         print(outputs)

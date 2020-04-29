@@ -482,24 +482,40 @@ def main(config = None):
                 real_inp = tf.concat([real_inp[:, :, :-1], r_progress_vector], axis = -1)
                 fake_inp = tf.concat([fake_inp[:, :, :-1], f_progress_vector], axis = -1)
                 
-
-            r_disc_outputs = discriminator(
-                decoding_strategy='train_greedy',
-                inputs=real_inp,
-                max_decoding_length=real_seq_lengths,
-                mode=discriminator_dropout,
-                )
-            r_disc_q_logit = r_disc_outputs.logits
-            r_disc_cell_outputs = r_disc_outputs.cell_outputs
-            
-            f_disc_outputs = discriminator(
-                decoding_strategy='train_greedy',
-                inputs=fake_inp,
-                max_decoding_length=gen_lengths,
-                mode=discriminator_dropout,
-                )
-            f_disc_q_logit = f_disc_outputs.logits
-            f_disc_cell_outputs = f_disc_outputs.cell_outputs
+            if "decoder" in config["disc_hparams"]["gpt2_stack"].keys():
+                r_disc_outputs = discriminator(
+                    decoding_strategy='train_greedy',
+                    inputs=real_inp,
+                    max_decoding_length=real_seq_lengths,
+                    mode=discriminator_dropout,
+                    )
+                r_disc_q_logit = r_disc_outputs.logits
+                r_disc_cell_outputs = r_disc_outputs.cell_outputs
+                
+                f_disc_outputs = discriminator(
+                    decoding_strategy='train_greedy',
+                    inputs=fake_inp,
+                    max_decoding_length=gen_lengths,
+                    mode=discriminator_dropout,
+                    )
+                f_disc_q_logit = f_disc_outputs.logits
+                f_disc_cell_outputs = f_disc_outputs.cell_outputs
+            else:
+                r_disc_outputs = discriminator(
+                    inputs=real_inp,
+                    sequence_length=real_seq_lengths,
+                    mode=discriminator_dropout,
+                    )
+                r_disc_q_logit = r_disc_outputs.logits
+                r_disc_cell_outputs = r_disc_outputs.cell_outputs
+                
+                f_disc_outputs = discriminator(
+                    inputs=fake_inp,
+                    sequence_length=gen_lengths,
+                    mode=discriminator_dropout,
+                    )
+                f_disc_q_logit = f_disc_outputs.logits
+                f_disc_cell_outputs = f_disc_outputs.cell_outputs
 
             
             
@@ -634,24 +650,40 @@ def main(config = None):
             label_seq_lengths = tf.clip_by_value(label_seq_lengths, 0, max_length)
 
 
-            # Pass through classifier
-            r_clas_outputs = classifier(
-                decoding_strategy='train_greedy',
-                inputs=real_label_inp_emb,
-                max_decoding_length=label_seq_lengths,
-                mode=classifier_dropout,
-                )
-            r_clas_q_logit = r_clas_outputs.logits
-            r_clas_cell_outputs = r_clas_outputs.cell_outputs
-            
-            f_clas_outputs = classifier(
-                decoding_strategy='train_greedy',
-                inputs=fake_label_inp_emb,
-                max_decoding_length=gen_lengths,
-                mode=classifier_dropout,
-                )
-            f_clas_q_logit = f_clas_outputs.logits
-            f_clas_cell_outputs = f_clas_outputs.cell_outputs
+            if "decoder" in config["clas_hparams"]["gpt2_stack"].keys():
+                r_clas_outputs = classifier(
+                    decoding_strategy='train_greedy',
+                    inputs=real_label_inp_emb,
+                    max_decoding_length=label_seq_lengths,
+                    mode=classifier_dropout,
+                    )
+                r_clas_q_logit = r_clas_outputs.logits
+                r_clas_cell_outputs = r_clas_outputs.cell_outputs
+                
+                f_clas_outputs = classifier(
+                    decoding_strategy='train_greedy',
+                    inputs=fake_label_inp_emb,
+                    max_decoding_length=gen_lengths,
+                    mode=classifier_dropout,
+                    )
+                f_clas_q_logit = f_clas_outputs.logits
+                f_clas_cell_outputs = f_clas_outputs.cell_outputs
+            else:
+                r_clas_outputs = classifier(
+                    inputs=real_label_inp_emb,
+                    sequence_length=label_seq_lengths,
+                    mode=classifier_dropout,
+                    )
+                r_clas_q_logit = r_clas_outputs.logits
+                r_clas_cell_outputs = r_clas_outputs.cell_outputs
+                
+                f_clas_outputs = classifier(
+                    inputs=fake_label_inp_emb,
+                    sequence_length=gen_lengths,
+                    mode=classifier_dropout,
+                    )
+                f_clas_q_logit = f_clas_outputs.logits
+                f_clas_cell_outputs = f_clas_outputs.cell_outputs
             
 
 
