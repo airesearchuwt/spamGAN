@@ -13,8 +13,8 @@
 
 	"restore_model": false,
 	"clear_run_logs": false,
-	"log_dir": "/home/hanfeiyu/Pretrained-spamGAN/final_experiments/opspam/spamGAN_out/ckpt",
-	"checkpoint_dir": "/home/hanfeiyu/Pretrained-spamGAN/final_experiments/opspam/spamGAN_out/ckpt",
+	"log_dir": "/home/hanfeiyu/Pretrained-spamGAN/ckpt",
+	"checkpoint_dir": "/home/hanfeiyu/Pretrained-spamGAN/ckpt",
 	"load_checkpoint_file": null,
 
 	"gen_clas_test": false,
@@ -41,7 +41,7 @@
 	"g_pretrain_epochs": 8,
 	"d_pretrain_epochs": 4,
 	"d_pretrain_critic_epochs": 0,
-	"c_pretrain_epochs": 8,
+	"c_pretrain_epochs": 4,
 	"adversarial_epochs": 5,
 
 	"disc_adv_epochs": 1,
@@ -552,8 +552,8 @@
 		"optimizer": {
 			"type": "tensorflow.contrib.opt.AdamWOptimizer",
 			"kwargs": {
-				"weight_decay": 1e-5,
-				"learning_rate": 6.25e-5
+				"weight_decay": 1e-6,
+				"learning_rate": 6.25e-6
 			}
 		},
 		"learning_rate_decay": {
