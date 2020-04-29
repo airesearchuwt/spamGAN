@@ -4,7 +4,7 @@
 	"is_xlnet_trainable": true,
 
 	
-	"sample_strategy": "infer",
+	"sample_strategy": "train",
 	"sample_helper": "sample",
 	"beam_width": 4,
 	"infer_topk":16,
@@ -38,10 +38,10 @@
 
 
 	"g_unlab_every_n": 3,
-	"g_pretrain_epochs": 0,
-	"d_pretrain_epochs": 0,
+	"g_pretrain_epochs": 8,
+	"d_pretrain_epochs": 4,
 	"d_pretrain_critic_epochs": 0,
-	"c_pretrain_epochs": 0,
+	"c_pretrain_epochs": 4,
 	"adversarial_epochs": 5,
 
 	"disc_adv_epochs": 1,
@@ -522,13 +522,13 @@
 		"gradient_noise_scale": null,
 		"name": null
 	},
-
-	"c_opt_hparams": {
+	
+	"d_opt_hparams": {
 		"optimizer": {
 			"type": "tensorflow.contrib.opt.AdamWOptimizer",
 			"kwargs": {
-				"weight_decay": 1e-5,
-				"learning_rate": 6.25e-5
+				"weight_decay": 1e-8,
+				"learning_rate": 6.25e-8
 			}
 		},
 		"learning_rate_decay": {
@@ -548,12 +548,12 @@
 		"name": null
 	},
 
-	"d_opt_hparams": {
+	"c_opt_hparams": {
 		"optimizer": {
 			"type": "tensorflow.contrib.opt.AdamWOptimizer",
 			"kwargs": {
-				"weight_decay": 1e-6,
-				"learning_rate": 6.25e-6
+				"weight_decay": 1e-5,
+				"learning_rate": 6.25e-5
 			}
 		},
 		"learning_rate_decay": {
