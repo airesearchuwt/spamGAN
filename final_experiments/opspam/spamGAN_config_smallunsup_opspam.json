@@ -39,7 +39,7 @@
 
 	"g_unlab_every_n": 3,
 	"g_pretrain_epochs": 8,
-	"d_pretrain_epochs": 1,
+	"d_pretrain_epochs": 4,
 	"d_pretrain_critic_epochs": 0,
 	"c_pretrain_epochs": 8,
 	"adversarial_epochs": 5,

@@ -1550,9 +1550,9 @@ def main(config = None):
                         test_sent_count += 1
                         fl.debug('TEST SENT {}'.format(test_sent_count))
                         final_lines = ('class: {} r_clas_loss {:0.02f} r_clas_score {:0.02f}'
-                                       'r_clas_acc {:0.02f} r_clas_f1 {:0.02f}').format(
-                                           rtns['real_class'][i], rtns['real_loss'], rtns['r_clas_score'][i],
-                                           rtns['r_clas_acc'], rtns['r_clas_f1'])
+                                       'r_clas_acc {:0.02f}').format(
+                                           rtns['real_class'][i], rtns['real_loss'], 
+                                           rtns['r_clas_score'][i], rtns['r_clas_acc'])
 
                         print_out_array(header, r_values, fl, final_lines)
                     
