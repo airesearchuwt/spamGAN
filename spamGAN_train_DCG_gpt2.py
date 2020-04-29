@@ -1564,7 +1564,6 @@ def main(config = None):
                     total_fake_acc += rtns['f_clas_acc'] * rtns['batch_size']
                 else:
                     total_fake_acc = 0
-#                 if mode_string == 'test':
                 if mode_string == 'test':
                     total_real_tp += rtns["r_tp"]
                     total_real_tn += rtns["r_tn"]
@@ -1890,6 +1889,7 @@ def main(config = None):
                     disc_rtns = disc_run_epoch(sess, 'train', sum_writer, disc_rtns['step'])
                     total_runtime = total_runtime + disc_rtns["total_runtime"]
                     disc_adv_time = disc_adv_time + disc_rtns["total_runtime"]
+                    logger.info('\nDisc Adv-Valid Epoch {}+{}'.format(cur_epoch, disc_e))
                     disc_rtns = disc_run_epoch(sess, 'val', sum_writer, disc_rtns['step'])
                     total_runtime = total_runtime + disc_rtns["total_runtime"]
                     disc_adv_time = disc_adv_time + disc_rtns["total_runtime"]
@@ -1915,7 +1915,7 @@ def main(config = None):
                     clas_rnts = clas_run_epoch(sess, 'train', sum_writer, clas_rtns['step'])
                     total_runtime = total_runtime + clas_rtns["total_runtime"]
                     clas_adv_time = clas_adv_time + clas_rtns["total_runtime"]
-                    logger.info('\nClas Adv-Val Epoch {}'.format(cur_epoch))
+                    logger.info('\nClas Adv-Val Epoch {}+{}'.format(cur_epoch, clas_e))
                     clas_rtns = clas_run_epoch(sess, 'val', sum_writer, clas_rtns['step'])
                     total_runtime = total_runtime + clas_rtns["total_runtime"]
                     clas_adv_time = clas_adv_time + clas_rtns["total_runtime"]

@@ -56,6 +56,7 @@ def make_data(trp, usp, run):
         
     os.mkdir(os.path.join(BASEDIR, dir_name))
     curdir = os.path.join(BASEDIR, dir_name)
+    ckptdir = os.path.join(BASEDIR, "ckpt")
     
     data_paths = {
         'train_data_reviews' : os.path.join(curdir, 'trevs.txt'),
@@ -75,6 +76,7 @@ def make_data(trp, usp, run):
         'clas_pred_output' : "testpreds.txt",
         "gen_perp_output": "perplexities.txt",
         'dir' : curdir,
+        "ckptdir": ckptdir,
         "config_json": os.path.join(curdir, config_json)
     }
 
@@ -116,7 +118,6 @@ for train_pcent in [0.1, 0.3, 0.5, 0.7, 0.9, 1.0]:
             base_config = json.loads(open(base_config_file).read())
             data_paths = make_data(train_pcent, unsup_pcent, run)
             
-            
             # inject file paths
             base_config["train_data"]['datasets'][0]['files'] = [data_paths['train_data_reviews'],
                                                               data_paths['unsup_train_data_reviews']]
@@ -137,7 +138,7 @@ for train_pcent in [0.1, 0.3, 0.5, 0.7, 0.9, 1.0]:
             base_config["clas_pred_output"] = data_paths['clas_pred_output']
             base_config["gen_perp_output"] = data_paths['gen_perp_output']
             base_config["log_dir"] = data_paths['dir']
-            base_config["checkpoint_dir"] = data_paths['dir']
+            base_config["checkpoint_dir"] = data_paths['ckptdir']
             print(base_config["train_data"]['datasets'][0]['files'])
             print('Train Pcent {} Unsup Pcent {} Run {}'.format(train_pcent, unsup_pcent, run))
             

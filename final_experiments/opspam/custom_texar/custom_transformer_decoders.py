@@ -38,6 +38,7 @@ from texar.tf.modules.encoders.multihead_attention import \
     MultiheadAttentionEncoder
 from texar.tf.modules.decoders.rnn_decoder_base import _make_output_layer
 from texar.tf.modules.decoders import tf_helpers as tx_helper, tf_helpers
+from custom_texar import custom_helpers
 # from texar.tf.utils import beam_search, transformer_attentions as attn
 from texar.tf.utils import transformer_attentions as attn
 from custom_texar import custom_beam_search
@@ -76,7 +77,6 @@ class TransformerDecoderEncodeOutput(collections.namedtuple(
             containing the sampled token indexes.
     """
 
-
 class TransformerDecoder(ModuleBase, TFDecoder):
     """Transformer decoder that applies multi-head self-attention for
     sequence decoding.
@@ -112,6 +112,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                  hparams=None,
                  encode_mode=False):
         ModuleBase.__init__(self, hparams)
+        self._encode_mode = encode_mode
 
         with tf.variable_scope(self.variable_scope):
             if self._hparams.initializer:
@@ -119,19 +120,24 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     layers.get_initializer(self._hparams.initializer))
 
             # Make the output layer
-            if encode_mode is False:
+            if self._encode_mode is False:
                 self._output_layer, self._vocab_size = _make_output_layer(
                     output_layer, vocab_size, self._hparams.output_layer_bias,
                     self.variable_scope)
+                self._dropout_layer = tf.layers.Dropout(
+                    rate=self._hparams["output_layer"]["dropout_rate"],
+                    name="{}_{}".format(self._hparams["output_layer"]["name"], "dropout"))
             else:
                 self._vocab_size = vocab_size
-                with tf.variable_scope(self.variable_scope):
-                    _output_layer = tf.layers.Dense(
-                        units=1, 
-                        activation="linear",
-                        name="gpt2_encode_logits")
-                self._output_layer = _output_layer
-
+                self._output_layer = tf.layers.Dense(
+                    units=self._hparams["output_layer"]["units"], 
+                    activation=self._hparams["output_layer"]["activation"],
+                    name=self._hparams["output_layer"]["name"]
+                    )
+                self._dropout_layer = tf.layers.Dropout(
+                    rate=self._hparams["output_layer"]["dropout_rate"],
+                    name="{}_{}".format(self._hparams["output_layer"]["name"], "dropout"))
+                
             # Make attention and poswise networks
             self.multihead_attentions = {
                 'self_att': [],
@@ -182,7 +188,6 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             self._helper = None
             self._cache = None
             self.max_decoding_length = None
-            self.encode_mode = encode_mode
 
     @staticmethod
     def default_hparams():
@@ -283,6 +288,12 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 'use_bias': False,
             },
             "initializer": None,
+            "output_layer": {
+                "units": 1,
+                "activation": "linear",
+                "dropout_rate": 0.1,
+                "name": "gpt2_stack_output"
+            },
             "name": "transformer_decoder",
         }
 
@@ -313,7 +324,6 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         """
         _batch_size = shape_list(input_ids)[0]
         times = tf.ones([_batch_size], dtype=tf.int32) * step
-#         inputs = self.embedding(input_ids, times)
         inputs = self.embedding(input_ids, times, self.mode)
         inputs = tf.concat(
             [inputs[:, :(inputs.shape[-1]-self.sample_context.shape[-1])], self.sample_context],
@@ -524,7 +534,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             self.context_sequence_length = context_sequence_length - 1
         else:
             self.context = None
-
+            
         self.embedding = embedding
         self.mode = mode
         self.softmax_temperature = softmax_temperature
@@ -535,10 +545,9 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         else:
             self.sample_context = None
 
-#         if helper is None and beam_width is None and \
-#                 decoding_strategy == 'train_greedy':  # Teacher-forcing
         if helper is None and beam_width is None and \
-                (decoding_strategy == 'train_greedy' or decoding_strategy == "train_sample"):  # Teacher-forcing
+                (decoding_strategy == "train_greedy" or \
+                 decoding_strategy == "train_sample"):  # Teacher-forcing
             decoder_self_attention_bias = (
                 attn.attention_bias_lower_triangle(
                     shape_list(inputs)[1]))
@@ -551,31 +560,21 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 cache=None,
                 mode=mode)
             
-#             logits = self._output_layer(decoder_output)
-#                 preds = tf.cast(tf.argmax(logits, axis=-1), tf.int32)
-#                 rets = TransformerDecoderOutput(
-#                     logits=logits,
-#                     sample_id=preds
-#                 )
-            logits = self._output_layer(decoder_output)
+            logits = self._dropout_layer(
+                self._output_layer(decoder_output), is_train_mode(mode))
             
-            if self.encode_mode is False:
+            if self._encode_mode is False:
                 if decoding_strategy == "train_greedy":
                     preds = tf.cast(tf.argmax(logits, axis=-1), tf.int32)
-                    rets = TransformerDecoderOutput(
-                        logits=logits,
-                        sample_id=preds
-                    )
-                else: # Train-sample
+                else: # Train-sample decoding
                     if self.softmax_temperature is not None:
                         logits = logits / self.softmax_temperature
-                        
                     sample_id_sampler = tf.distributions.Categorical(logits=logits)
-                    sample_id = sample_id_sampler.sample(seed=None)
-  
-                    rets = TransformerDecoderOutput(
+                    preds = sample_id_sampler.sample(seed=None)
+                
+                rets = TransformerDecoderOutput(
                         logits=logits,
-                        sample_id=sample_id
+                        sample_id=preds
                     )
             else:
                 rets = TransformerDecoderEncodeOutput(
@@ -586,40 +585,12 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             if max_decoding_length is None:
                 max_decoding_length = self._hparams.max_decoding_length
             self.max_decoding_length = max_decoding_length
-            if beam_width is None:  # Inference-like decoding
-                # Prepare helper
+            if beam_width is None and decoding_strategy == "infer":  # Inference-like decoding
+                # Check helper
                 if helper is None:
-                    if decoding_strategy == "infer_greedy":
-#                         helper = tx_helper.GreedyEmbeddingHelper(
-#                             embedding, start_tokens, end_token)
-                        if sample_context is None:
-                            helper = tx_helper.SampleEmbeddingHelper(
-                                embedding, start_tokens, end_token,
-                                softmax_temperature)
-                        else:
-                            # Decoding strategy for sample spamGAN
-                            helper = tx_helper.GPT2ContextSampleEmbeddingHelper(
-                                embedding, self.mode, sample_context, start_tokens, end_token,
-                                softmax_temperature)
-                    elif decoding_strategy == "infer_sample":
-#                         helper = tx_helper.SampleEmbeddingHelper(
-#                             embedding, start_tokens, end_token,
-#                             softmax_temperature)
-                        if sample_context is None:
-                            helper = tx_helper.SampleEmbeddingHelper(
-                                embedding, start_tokens, end_token,
-                                softmax_temperature)
-                        else:
-                            # Decoding strategy for sample spamGAN
-                            helper = tx_helper.GPT2ContextSampleEmbeddingHelper(
-                                embedding, self.mode, sample_context, start_tokens, end_token,
-                                softmax_temperature)
-                    else:
-                        raise ValueError(
-                            "Unknown decoding strategy: {}".format(
-                                decoding_strategy))
+                    raise ValueError("Helper required for inference-like decoding")
+                
                 self._helper = helper
-
                 self._cache = self._init_cache(memory, memory_attention_bias,
                                                beam_search_decoding=False)
                 if context is not None:
@@ -636,6 +607,17 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     output_time_major=False,
                     scope=self.variable_scope)
                 
+                # Check if Gumbel-Softmax sampling
+                logits = self._dropout_layer(outputs.logits, is_train_mode(mode))
+                try:
+                    tf.shape(outputs.sample_id)[2]
+                except ValueError:
+                    sample_id = outputs.sample_id
+                else:
+                    sample_id_sampler = tf.distributions.Categorical(
+                        logits=outputs.sample_id)
+                    sample_id = sample_id_sampler.sample(seed=None)
+                
                 if context is not None:
                     # Here the length of sample_id will be larger than that
                     # of logit by 1, because there will be a additional
@@ -643,17 +625,22 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     # the start_id should be the first token of the
                     # given context
                     outputs = TransformerDecoderOutput(
-                        logits=outputs.logits,
+                        logits=logits,
                         sample_id=tf.concat(
                             [tf.expand_dims(start_tokens, 1),
-                             outputs.sample_id],
+                             sample_id],
                             axis=1
                         )
                     )
                     sequence_lengths = sequence_lengths + 1
+                else:
+                    outputs = TransformerDecoderOutput(
+                        logits=logits,
+                        sample_id=sample_id
+                        )
+                    
                 rets = outputs, sequence_lengths
-                print("rets: {}".format(rets))
-
+                
             else:  # Beam-search decoding
                 # Ignore `decoding_strategy`; Assume `helper` is not set
                 if helper is not None:
@@ -665,17 +652,6 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                                                batch_size=_batch_size)
 
                 # The output format is different when running beam search
-#                 sample_id, log_prob = self._beam_decode(
-#                     start_tokens,
-#                     end_token,
-#                     beam_width=beam_width,
-#                     length_penalty=length_penalty,
-#                     decode_length=max_decoding_length,
-#                 )
-#                 rets = {
-#                     'sample_id': sample_id,
-#                     'log_prob': log_prob
-#                 }
                 _, _, logits = self._beam_decode(
                     start_tokens,
                     end_token,
@@ -683,6 +659,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     length_penalty=length_penalty,
                     decode_length=max_decoding_length,
                 )
+                logits = self._dropout_layer(logits, is_train_mode(mode))
                 
                 sample_id_sampler = tf.distributions.Categorical(logits=logits)
                 sample_id = sample_id_sampler.sample(seed=None)
@@ -844,15 +821,6 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             return self._input_ids_to_outputs(
                 ids[:, -1], step, cache)
             
-#         outputs, log_prob = beam_search.beam_search(
-#             _symbols_to_logits_fn,
-#             start_tokens,
-#             beam_width,
-#             decode_length,
-#             self._vocab_size,
-#             length_penalty,
-#             eos_id=end_token,
-#             states=self._cache)
         outputs, log_prob, logits = custom_beam_search.beam_search(
             _symbols_to_logits_fn,
             start_tokens,
@@ -867,7 +835,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         outputs = outputs[:, :, 1:]
         # shape = [batch_size, seq_length, beam_width]
         outputs = tf.transpose(outputs, [0, 2, 1])
-#         return (outputs, log_prob)
+        
         return (outputs, log_prob, logits)
 
     @property

@@ -13,8 +13,8 @@
 
 	"restore_model": false,
 	"clear_run_logs": false,
-	"log_dir": "/home/hanfeiyu/Pretrained-spamGAN/ckpt",
-	"checkpoint_dir": "/home/hanfeiyu/Pretrained-spamGAN/ckpt",
+	"log_dir": "/tmp",
+	"checkpoint_dir": "/tmp",
 	"load_checkpoint_file": null,
 
 	"gen_clas_test": false,
@@ -241,6 +241,7 @@
 
 		"gpt2_stack": {
 			"encode_mode": false,
+			"use_transformer_encoder": false,
 			"pretrained_model_name": "gpt2-small",
 			"vocab_size": 50257,
 			"context_size": 1024,
@@ -257,7 +258,7 @@
 				"name": "position_embeddings"
 			},
 
-			"decoder": {
+			"transformer": {
 				"dim": 768,
 				"num_blocks": 12,
 				"embedding_dropout": 0.1,
@@ -315,6 +316,7 @@
 
 		"gpt2_stack": {
 			"encode_mode": true,
+			"use_transformer_encoder": true,
 			"pretrained_model_name": "gpt2-small",
 			"vocab_size": 50257,
 			"context_size": 1024,
@@ -331,7 +333,7 @@
 				"name": "position_embeddings"
 			},
 
-			"encoder": {
+			"transformer": {
 				"dim": 768,
 				"num_blocks": 12,
 				"embedding_dropout": 0.1,
@@ -395,6 +397,7 @@
 
 		"gpt2_stack": {
 			"encode_mode": true,
+			"use_transformer_encoder": true,
 			"pretrained_model_name": "gpt2-small",
 			"vocab_size": 50257,
 			"context_size": 1024,
@@ -411,7 +414,7 @@
 				"name": "position_embeddings"
 			},
 
-			"encoder": {
+			"transformer": {
 				"dim": 768,
 				"num_blocks": 12,
 				"embedding_dropout": 0.1,

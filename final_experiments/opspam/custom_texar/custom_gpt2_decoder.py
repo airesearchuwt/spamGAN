@@ -349,3 +349,4 @@ class GPT2Decoder(PretrainedGPT2Mixin):
                                          load_output_layer=True)
         print("outputs: {}".format(outputs))
         return outputs
+
