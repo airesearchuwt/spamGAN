@@ -477,8 +477,8 @@
 		"optimizer": {
 			"type": "tensorflow.contrib.opt.AdamWOptimizer",
 			"kwargs": {
-				"weight_decay": 1e-4,
-				"learning_rate": 6.25e-4
+				"weight_decay": 1e-3,
+				"learning_rate": 1e-3
 			}
 		},
 		"learning_rate_decay": {
@@ -491,7 +491,7 @@
 		"gradient_clip": {
 			"type": "tensorflow.clip_by_global_norm",
 			"kwargs": {
-				"clip_norm": 5
+				"clip_norm": 4
 			}
 		},
 		"gradient_noise_scale": null,
