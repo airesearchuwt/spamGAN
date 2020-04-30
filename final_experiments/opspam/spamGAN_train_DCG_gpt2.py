@@ -23,8 +23,7 @@ class Generator(tf.keras.Model):
     def __init__(self, gen_config):
         super(Generator, self).__init__()
         self.decoder = GPT2Stack(hparams=gen_config["gpt2_stack"])
-        self.word_embedder = self.decoder.word_embedder
-        self.position_embedder = self.decoder.position_embedder
+        self.embedder = self.decoder.embeddings()
 
 
 class Discriminator(tf.keras.Model):
@@ -32,17 +31,13 @@ class Discriminator(tf.keras.Model):
     def __init__(self, disc_config):
         super(Discriminator, self).__init__()
         self.encoder = GPT2Stack(hparams=disc_config["gpt2_stack"])
-        self.word_embedder = self.encoder.word_embedder
-        self.position_embedder = self.encoder.position_embedder
-            
+        self.embedder = self.encoder.embeddings()
 
 class Classifier(tf.keras.Model):
     def __init__(self, class_config):
         super(Classifier, self).__init__()
         self.encoder = GPT2Stack(hparams=class_config["gpt2_stack"])
-        self.word_embedder = self.encoder.word_embedder
-        self.position_embedder = self.encoder.position_embedder
-
+        self.embedder = self.encoder.embeddings()
 
 def get_logger(log_dir):
     logging.basicConfig(
@@ -50,7 +45,7 @@ def get_logger(log_dir):
         format="%(message)s")
     fh = logging.FileHandler("{0}/log.txt".format(log_dir))
     fh.setLevel(logging.DEBUG)
-    logger = logging.getLogger("StepGAN")
+    logger = logging.getLogger("Pretrained-spamGAN")
     logger.addHandler(fh)
     return logger
 
@@ -155,19 +150,20 @@ def main(config = None):
         # Generator
         generator_dropout = tf.placeholder(tf.string)
         gen_model = Generator(config["gen_hparams"])
-        g_decoder = gen_model.decoder
+        generator = gen_model.decoder
+        gen_embedder = gen_model.embedder
 
         # Discriminator
         discriminator_dropout = tf.placeholder(dtype=tf.string)
         disc_model = Discriminator(config["disc_hparams"])
         discriminator = disc_model.encoder
-        disc_embedder = discriminator.embeddings()
+        disc_embedder = disc_model.embedder
 
         # Classifier
         classifier_dropout = tf.placeholder(dtype=tf.string)
         clas_model = Classifier(config["clas_hparams"])
         classifier = clas_model.encoder
-        clas_embedder = classifier.embeddings()
+        clas_embedder = clas_model.embedder
 
         # Critics
         disc_crit_layer = tf.layers.Dense(**config["disc_crit_hparams"])
@@ -195,7 +191,7 @@ def main(config = None):
                 tf.tile(context, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size + class_size])
 
             
-            outputs_mle = g_decoder(
+            outputs_mle = generator(
                 decoding_strategy='train_greedy',
                 inputs=x,
                 mode=generator_dropout,
@@ -220,7 +216,7 @@ def main(config = None):
             mle_optimizer = tx.core.get_optimizer(global_step=global_step,
                                                   hparams=config["g_opt_mle_hparams"])
             if config["is_gpt2_trainable"] is True:
-                g_variables = tx.utils.collect_trainable_variables([g_decoder])
+                g_variables = tx.utils.collect_trainable_variables([generator])
             else:
                 raise ValueError(f"Generator is frozen")
                 
@@ -291,16 +287,17 @@ def main(config = None):
             if sample_strategy == "infer":
                 if sample_helper == "greedy":
                     gpt2_context_helper = custom_helpers.GPT2ContextGreedyEmbeddingHelper(
-                        embedding=g_decoder.embeddings(), 
+                        embedding=gen_embedder, 
                         mode=generator_dropout, 
                         context=random_vector, 
+                        max_decoding_length=max_length,
                         start_tokens=start_tokens, 
                         end_token=end_token, 
                         softmax_temperature=softmax_temperature
                         )
                 elif sample_helper == "sample":
                     gpt2_context_helper = custom_helpers.GPT2ContextSampleEmbeddingHelper(
-                        embedding=g_decoder.embeddings(), 
+                        embedding=gen_embedder, 
                         mode=generator_dropout, 
                         context=random_vector, 
                         start_tokens=start_tokens, 
@@ -310,7 +307,7 @@ def main(config = None):
                 elif sample_helper == "topk_sample":
                     topk = config["infer_topk"]
                     gpt2_context_helper = custom_helpers.GPT2ContextTopKSampleEmbeddingHelper(
-                        embedding=g_decoder.embeddings(), 
+                        embedding=gen_embedder, 
                         mode=generator_dropout, 
                         context=random_vector, 
                         start_tokens=start_tokens, 
@@ -320,7 +317,7 @@ def main(config = None):
                         )
                 elif sample_helper == "softmax":
                     gpt2_context_helper = custom_helpers.GPT2ContextSoftmaxEmbeddingHelper(
-                        embedding=g_decoder.embeddings(), 
+                        embedding=gen_embedder, 
                         mode=generator_dropout, 
                         context=random_vector, 
                         start_tokens=start_tokens, 
@@ -330,7 +327,7 @@ def main(config = None):
                         )
                 elif sample_helper == "gumbel_softmax":
                     gpt2_context_helper = custom_helpers.GPT2ContextGumbelSoftmaxEmbeddingHelper(
-                        embedding=g_decoder.embeddings(), 
+                        embedding=gen_embedder, 
                         mode=generator_dropout, 
                         context=random_vector, 
                         start_tokens=start_tokens, 
@@ -339,7 +336,7 @@ def main(config = None):
                         tau=softmax_temperature 
                         )
                 
-                gen_outputs, gen_lengths = g_decoder(
+                gen_outputs, gen_lengths = generator(
                     decoding_strategy="infer",
                     helper=gpt2_context_helper,
                     mode=generator_dropout,
@@ -350,11 +347,11 @@ def main(config = None):
                 
             elif sample_strategy == "train":
                 gen_inputs = inp[:, 1:(tf.shape(inp)[1]-1)]
-                gen_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(x)[1]) # Trim non-ending sentences. 
+                gen_inputs_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(gen_inputs)[1]) # Trim non-ending sentences. 
                 tiled_random_vector = tf.reshape(
                     tf.tile(random_vector, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size+class_size])
                 
-                gen_outputs = g_decoder(
+                gen_outputs = generator(
                     decoding_strategy="train_sample" if sample_helper == "sample" else "train_greedy",
                     inputs=gen_inputs,
                     softmax_temperature=config["sampling_temperature"],
@@ -364,7 +361,40 @@ def main(config = None):
                 gen_logits = gen_outputs.logits
                 gen_sample_ids = gen_outputs.sample_id
                 gen_lengths = get_gen_lengths(gen_sample_ids)
-
+                    
+            elif sample_strategy == "scheduled":
+                gen_inputs = inp[:, 1:(tf.shape(inp)[1]-1)]
+                gen_inputs_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(gen_inputs)[1]) # Trim non-ending sentences. 
+                tiled_random_vector = tf.reshape(
+                    tf.tile(random_vector, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size+class_size])
+                gen_inputs_time = tf.expand_dims(tf.range(tf.shape(gen_inputs)[1] ), 0)
+                gen_inputs_time = tf.broadcast_to(gen_inputs_time, [tf.shape(gen_inputs)[0], tf.shape(gen_inputs)[1] ])
+                gen_inputs_emb = gen_embedder(gen_inputs, gen_inputs_time, generator_dropout)
+                gen_inputs_emb = tf.concat(
+                    [gen_inputs_emb[:, :, :(gen_inputs_emb.shape[-1]-tiled_random_vector.shape[-1])], tiled_random_vector], axis = -1)
+                    
+                if sample_helper == "sample":
+                    sampling_probability = config["sampling_probability"]
+                    gpt2_context_helper = custom_helpers.GPT2ScheduledEmbeddingTrainingHelper(
+                        inputs=gen_inputs_emb,
+                        sequence_length=gen_inputs_lengths,
+                        embedding=gen_embedder, 
+                        mode=generator_dropout,
+                        context=random_vector, 
+                        sampling_probability=sampling_probability, 
+                        )
+                    
+                    gen_outputs, gen_lengths = generator(
+                    decoding_strategy="scheduled",
+                    helper=gpt2_context_helper,
+                    mode=generator_dropout,
+                    max_decoding_length=max_length
+                    )
+                    gen_logits = gen_outputs.logits
+                    gen_sample_ids = gen_outputs.sample_id
+                else:
+                    raise KeyError(f"Scheduled strategy only supports token-level")
+            
             elif sample_strategy == "beam_search":
                 beam_width = config["beam_width"]
                 beam_random_context = tf.random.normal([beam_width * batch_size, config["noise_size"]])
@@ -374,7 +404,7 @@ def main(config = None):
                 beam_random_vector = tf.concat([beam_random_context, 
                                            tf.cast(beam_tiled_random_classes, tf.float32)], 
                                            axis=-1)
-                gen_outputs = g_decoder(
+                gen_outputs = generator(
                     decoding_strategy="beam_search",
                     mode=generator_dropout,
                     beam_width=beam_width,
@@ -944,7 +974,7 @@ def main(config = None):
             pg_loss.set_shape((pg_loss.shape))
 
             if config["is_gpt2_trainable"] is True:
-                pg_variables = tx.utils.collect_trainable_variables([g_decoder])
+                pg_variables = tx.utils.collect_trainable_variables([generator])
             else:
                 raise ValueError(f"Generator is frozen")
                 
@@ -1550,9 +1580,9 @@ def main(config = None):
                         test_sent_count += 1
                         fl.debug('TEST SENT {}'.format(test_sent_count))
                         final_lines = ('class: {} r_clas_loss {:0.02f} r_clas_score {:0.02f}'
-                                       'r_clas_acc {:0.02f} r_clas_f1 {:0.02f}').format(
-                                           rtns['real_class'][i], rtns['real_loss'], rtns['r_clas_score'][i],
-                                           rtns['r_clas_acc'], rtns['r_clas_f1'])
+                                       'r_clas_acc {:0.02f}').format(
+                                           rtns['real_class'][i], rtns['real_loss'], 
+                                           rtns['r_clas_score'][i], rtns['r_clas_acc'])
 
                         print_out_array(header, r_values, fl, final_lines)
                     
