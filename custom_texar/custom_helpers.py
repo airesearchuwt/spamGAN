@@ -887,11 +887,11 @@ class GPT2ScheduledEmbeddingTrainingHelper(TrainingHelper):
                     state=state,
                     sample_ids=sample_ids,
                     name=name))
-
+            
+#             sample_ids = tf.convert_to_tensor(sample_ids)
+#             sample_ids = tf.reshape(sample_ids, [sample_ids.shape[0], 1])
             def maybe_sample():
                 """Perform scheduled sampling."""
-                sample_ids = tf.reshape(sample_ids, [sample_ids.shape[0], 1])
-                
                 where_sampling = math_ops.cast(
                     array_ops.where(sample_ids > -1), dtypes.int32)
                 where_not_sampling = math_ops.cast(
