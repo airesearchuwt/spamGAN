@@ -897,10 +897,11 @@ class GPT2ScheduledEmbeddingTrainingHelper(TrainingHelper):
                 sample_ids_sampling = array_ops.gather_nd(sample_ids, where_sampling)
                 inputs_not_sampling = array_ops.gather_nd(
                     base_next_inputs, where_not_sampling)
+                print("sample_ids: {}".format(sample_ids))
+                print("base_next_inputs: {}".format(base_next_inputs))
                 print("where_sampling: {}".format(where_sampling))
                 print("where_not_sampling: {}".format(where_not_sampling))
-                print("base_next_inputs: {}".format(base_next_inputs))
-
+                
                 if self._embedding_args_cnt == 2:
                     # Prepare the position embedding of the next step
                     times = tf.ones(self._batch_size,

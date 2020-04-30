@@ -1,4 +1,6 @@
 import tensorflow as tf
+from tensorflow.python.ops import array_ops, math_ops
+from tensorflow.python.framework import dtypes
 import json
 
 
@@ -37,14 +39,19 @@ def test_random_sample():
 
 
 if __name__ == "__main__":
-    config_file = "spamGAN_config_smallunsup_opspam.json"
-    config = json.loads(open(config_file).read())
-    config["test"] = "test_output"
+    x = tf.constant([[4], [3], [1], [7]])
+    y = tf.constant([9, 10, 11, 12])
+    shape = y.shape
     
-    with open("test_output.json", "w") as output:
-        json.dump(config, output)
+    sample_ids = tf.constant([[1], 
+                             [-1]])
+    
+    with tf.compat.v1.Session() as sess:
+        print(math_ops.cast(
+                    array_ops.where(sample_ids > -1), dtypes.int32).eval())
+        print(math_ops.cast(
+                    array_ops.where(sample_ids <= -1), dtypes.int32).eval())
+#         print(array_ops.scatter_nd(x, y, shape).eval())
         
-    input = json.loads(open("test_output.json").read())
-    print(input)
     
     
