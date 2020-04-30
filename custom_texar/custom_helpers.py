@@ -899,6 +899,7 @@ class GPT2ScheduledEmbeddingTrainingHelper(TrainingHelper):
                     base_next_inputs, where_not_sampling)
                 print("where_sampling: {}".format(where_sampling))
                 print("where_not_sampling: {}".format(where_not_sampling))
+                print("base_next_inputs: {}".format(base_next_inputs))
 
                 if self._embedding_args_cnt == 2:
                     # Prepare the position embedding of the next step
