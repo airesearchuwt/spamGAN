@@ -13,8 +13,8 @@
 
 	"restore_model": false,
 	"clear_run_logs": false,
-	"log_dir": "/home/hanfeiyu/Pretrained-spamGAN/ckpt",
-	"checkpoint_dir": "/home/hanfeiyu/Pretrained-spamGAN/ckpt",
+	"log_dir": "/tmp",
+	"checkpoint_dir": "/tmp",
 	"load_checkpoint_file": null,
 
 	"gen_clas_test": false,
@@ -119,14 +119,14 @@
 		"name": "train_data",
 		"datasets": [{
 				"files": ["./gpt2/minrun_train_reviews_bpe.txt"],
-				"vocab_file": "./gpt2/gpt2_vocab.txt",
+				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<BOS>",
+				"bos_token": "<|endoftext|>",
 				"delimiter": " ",
-				"eos_token": "<EOS>",
+				"eos_token": "<|endoftext|>",
 				"data_name": "x",
-				"pad_to_max_seq_length": true
+				"pad_to_max_seq_length": false
 			},
 			{
 				"files": ["./minrun_train_labels.txt"],
@@ -152,14 +152,14 @@
 		"name": "train_data",
 		"datasets": [{
 				"files": ["./gpt2/minrun_train_reviews_bpe_nounsup.txt"],
-				"vocab_file": "./gpt2/gpt2_vocab.txt",
+				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<BOS>",
+				"bos_token": "<|endoftext|>",
 				"delimiter": " ",
-				"eos_token": "<EOS>",
+				"eos_token": "<|endoftext|>",
 				"data_name": "x",
-				"pad_to_max_seq_length": true
+				"pad_to_max_seq_length": false
 			},
 			{
 				"files": ["./gpt2/minrun_train_labels_nounsup.txt"],
@@ -189,11 +189,11 @@
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<BOS>",
+				"bos_token": "<|endoftext|>",
 				"delimiter": " ",
-				"eos_token": "<EOS>",
+				"eos_token": "<|endoftext|>",
 				"data_name": "x",
-				"pad_to_max_seq_length": true
+				"pad_to_max_seq_length": false
 			},
 			{
 				"files": ["./minrun_val_labels.txt"],
@@ -218,14 +218,14 @@
 		"name": "test_data",
 		"datasets": [{
 				"files": ["./gpt2/minrun_test_reviews_bpe.txt"],
-				"vocab_file": "./gpt2/gpt2_vocab.txt",
+				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<BOS>",
+				"bos_token": "<|endoftext|>",
 				"delimiter": " ",
-				"eos_token": "<EOS>",
+				"eos_token": "<|endoftext|>",
 				"data_name": "x",
-				"pad_to_max_seq_length": true
+				"pad_to_max_seq_length": false
 			},
 			{
 				"files": ["minrun_test_labels.txt"],

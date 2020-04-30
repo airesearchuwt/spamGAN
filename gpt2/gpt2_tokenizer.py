@@ -205,9 +205,9 @@ def count_words(sup_path, unsup_path, just_sup, threshold=0):
 
 if __name__ == '__main__':
     
-    count_words("../data/opspam_reviews.txt",
-                "../data/chicago_unlab_reviews.txt", 
-                False)
+#     count_words("../data/opspam_reviews.txt",
+#                 "../data/chicago_unlab_reviews.txt", 
+#                 False)
 #     count_words("../data/yelp/train_review.txt", 
 #                 "../data/yelp/train_review.txt",
 #                 False,
@@ -220,7 +220,7 @@ if __name__ == '__main__':
 #     make_bpe_file("../data/yelp/labeled10/train_review.txt", "./yelp_train_reviews_bpe.txt")
 #     make_bpe_file("../data/yelp/labeled10/val_review.txt", "./yelp_val_reviews_bpe.txt")
 #     make_bpe_file("../data/yelp/test_review.txt", "./yelp_test_reviews_bpe.txt")
-#     make_gpt2_vocab()
+    make_gpt2_vocab()
     
 #     wipe_out_short_sentences(
 #         "./yelp_train_reviews_bpe.txt",
