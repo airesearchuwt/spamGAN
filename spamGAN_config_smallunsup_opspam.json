@@ -14,8 +14,8 @@
 
 	"restore_model": false,
 	"clear_run_logs": false,
-	"log_dir": "/tmp",
-	"checkpoint_dir": "/tmp",
+	"log_dir": "/home/hanfeiyu/Pretrained-spamGAN/ckpt",
+	"checkpoint_dir": "/home/hanfeiyu/Pretrained-spamGAN/ckpt",
 	"load_checkpoint_file": null,
 
 	"gen_clas_test": false,
