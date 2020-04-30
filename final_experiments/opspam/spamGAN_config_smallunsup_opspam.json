@@ -529,7 +529,7 @@
 			"type": "tensorflow.contrib.opt.AdamWOptimizer",
 			"kwargs": {
 				"weight_decay": 1e-7,
-				"learning_rate": 3.25e-7
+				"learning_rate": 4.25e-7
 			}
 		},
 		"learning_rate_decay": {
