@@ -14,8 +14,8 @@
 
 	"restore_model": false,
 	"clear_run_logs": false,
-	"log_dir": "/tmp",
-	"checkpoint_dir": "/tmp",
+	"log_dir": "/home/hanfeiyu/Pretrained-spamGAN/ckpt",
+	"checkpoint_dir": "/home/hanfeiyu/Pretrained-spamGAN/ckpt",
 	"load_checkpoint_file": null,
 
 	"gen_clas_test": false,
@@ -38,7 +38,7 @@
 	"batches_per_text_summary": 100,
 
 
-	"g_unlab_every_n": 3,
+	"g_unlab_every_n": 4,
 	"g_pretrain_epochs": 8,
 	"d_pretrain_epochs": 4,
 	"d_pretrain_critic_epochs": 0,
@@ -46,7 +46,7 @@
 	"adversarial_epochs": 5,
 
 	"disc_adv_epochs": 1,
-	"clas_adv_epochs": 10,
+	"clas_adv_epochs": 5,
 
 	"gen_adv_epochs": 2,
 	"g_unlab_every_n_adv": -1,
