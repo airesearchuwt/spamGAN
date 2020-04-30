@@ -893,10 +893,13 @@ class GPT2ScheduledEmbeddingTrainingHelper(TrainingHelper):
             def maybe_sample():
                 """Perform scheduled sampling."""
                 where_sampling = math_ops.cast(
-                    array_ops.where(sample_ids > -1), dtypes.int32)
+                    array_ops.where(
+                        array_ops.reshape(sample_ids, [sample_ids.shape[0], 1]) > -1), dtypes.int32)
                 where_not_sampling = math_ops.cast(
-                    array_ops.where(sample_ids <= -1), dtypes.int32)
-                sample_ids_sampling = array_ops.gather_nd(sample_ids, where_sampling)
+                    array_ops.where(
+                        array_ops.reshape(sample_ids, [sample_ids.shape[0], 1]) <= -1), dtypes.int32)
+                sample_ids_sampling = array_ops.gather_nd(
+                    array_ops.reshape(sample_ids, [sample_ids.shape[0], 1]), where_sampling)
                 inputs_not_sampling = array_ops.gather_nd(
                     base_next_inputs, where_not_sampling)
                 print("sample_ids: {}".format(sample_ids))
