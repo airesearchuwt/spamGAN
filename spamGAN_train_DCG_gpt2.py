@@ -1902,7 +1902,7 @@ def main(config = None):
                         gen_rtns = gen_run_epoch(sess, 'val', sum_writer)
                         total_runtime = total_runtime + gen_rtns["total_runtime"]
                         gen_adv_time = gen_adv_time + gen_rtns["total_runtime"]
-                        logger.info('\nGen Val loss:{}'.format(gen_rtns['loss']))
+                        logger.info('Gen Val loss:{}'.format(gen_rtns['loss']))
                 logger.info("\nTotal runtime after generator mle-train: {}".format(total_runtime))
                 
                 # Check discriminator loss
@@ -1919,7 +1919,7 @@ def main(config = None):
                     disc_rtns = disc_run_epoch(sess, 'train', sum_writer, disc_rtns['step'])
                     total_runtime = total_runtime + disc_rtns["total_runtime"]
                     disc_adv_time = disc_adv_time + disc_rtns["total_runtime"]
-                    logger.info('\nDisc Adv-Valid Epoch {}+{}'.format(cur_epoch, disc_e))
+                    logger.info('Disc Adv-Valid Epoch {}+{}'.format(cur_epoch, disc_e))
                     disc_rtns = disc_run_epoch(sess, 'val', sum_writer, disc_rtns['step'])
                     total_runtime = total_runtime + disc_rtns["total_runtime"]
                     disc_adv_time = disc_adv_time + disc_rtns["total_runtime"]
@@ -1945,7 +1945,7 @@ def main(config = None):
                     clas_rnts = clas_run_epoch(sess, 'train', sum_writer, clas_rtns['step'])
                     total_runtime = total_runtime + clas_rtns["total_runtime"]
                     clas_adv_time = clas_adv_time + clas_rtns["total_runtime"]
-                    logger.info('\nClas Adv-Val Epoch {}+{}'.format(cur_epoch, clas_e))
+                    logger.info('Clas Adv-Val Epoch {}+{}'.format(cur_epoch, clas_e))
                     clas_rtns = clas_run_epoch(sess, 'val', sum_writer, clas_rtns['step'])
                     total_runtime = total_runtime + clas_rtns["total_runtime"]
                     clas_adv_time = clas_adv_time + clas_rtns["total_runtime"]
