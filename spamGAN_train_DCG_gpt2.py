@@ -338,16 +338,6 @@ def main(config = None):
                         embedding_size=vocab_size,
                         tau=softmax_temperature 
                         )
-                elif sample_helper == "scheduled_sample":
-                    gpt2_context_helper = custom_helpers.GPT2ScheduledEmbeddingTrainingHelper(
-                        embedding=g_decoder.embeddings(), 
-                        mode=generator_dropout, 
-                        context=random_vector, 
-                        start_tokens=start_tokens, 
-                        end_token=end_token, 
-                        embedding_size=vocab_size,
-                        tau=softmax_temperature 
-                        )
                 
                 gen_outputs, gen_lengths = g_decoder(
                     decoding_strategy="infer",
@@ -363,6 +353,18 @@ def main(config = None):
                 gen_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(x)[1]) # Trim non-ending sentences. 
                 tiled_random_vector = tf.reshape(
                     tf.tile(random_vector, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size+class_size])
+                
+#                 if sample_helper == "scheduled_sample":
+#                     gpt2_context_helper = custom_helpers.GPT2ScheduledEmbeddingTrainingHelper(
+#                         inputs=gen_inputs,
+#                         embedding=g_decoder.embeddings(), 
+#                         mode=generator_dropout, 
+#                         context=random_vector, 
+#                         start_tokens=start_tokens, 
+#                         end_token=end_token, 
+#                         embedding_size=vocab_size,
+#                         tau=softmax_temperature 
+#                         )
                 
                 gen_outputs = g_decoder(
                     decoding_strategy="train_sample" if sample_helper == "sample" else "train_greedy",
