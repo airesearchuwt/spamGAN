@@ -46,7 +46,7 @@
 	"adversarial_epochs": 5,
 
 	"disc_adv_epochs": 1,
-	"clas_adv_epochs": 5,
+	"clas_adv_epochs": 10,
 
 	"gen_adv_epochs": 2,
 	"g_unlab_every_n_adv": -1,
