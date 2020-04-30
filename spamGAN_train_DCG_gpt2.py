@@ -338,6 +338,16 @@ def main(config = None):
                         embedding_size=vocab_size,
                         tau=softmax_temperature 
                         )
+                elif sample_helper == "scheduled_sample":
+                    gpt2_context_helper = custom_helpers.GPT2ScheduledEmbeddingTrainingHelper(
+                        embedding=g_decoder.embeddings(), 
+                        mode=generator_dropout, 
+                        context=random_vector, 
+                        start_tokens=start_tokens, 
+                        end_token=end_token, 
+                        embedding_size=vocab_size,
+                        tau=softmax_temperature 
+                        )
                 
                 gen_outputs, gen_lengths = g_decoder(
                     decoding_strategy="infer",

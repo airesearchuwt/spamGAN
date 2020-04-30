@@ -9,6 +9,7 @@
 	"beam_width": 4,
 	"infer_topk":16,
 	"sampling_temperature": 1.0,
+	"sampling_probability": 0.5,
 	
 
 	"restore_model": false,
@@ -38,7 +39,7 @@
 
 
 	"g_unlab_every_n": 3,
-	"g_pretrain_epochs": 8,
+	"g_pretrain_epochs": 8,,
 	"d_pretrain_epochs": 4,
 	"d_pretrain_critic_epochs": 0,
 	"c_pretrain_epochs": 4,
@@ -477,8 +478,8 @@
 		"optimizer": {
 			"type": "tensorflow.contrib.opt.AdamWOptimizer",
 			"kwargs": {
-				"weight_decay": 1e-3,
-				"learning_rate": 1e-3
+				"weight_decay": 1e-4,
+				"learning_rate": 6.25e-4
 			}
 		},
 		"learning_rate_decay": {

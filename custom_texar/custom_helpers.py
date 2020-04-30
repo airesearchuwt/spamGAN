@@ -859,14 +859,14 @@ class TrainingHelper(Helper):
             return (finished, next_inputs, state)
 
 
-class ScheduledEmbeddingTrainingHelper(TrainingHelper):
+class GPT2ScheduledEmbeddingTrainingHelper(TrainingHelper):
     """A training helper that adds scheduled sampling.
 
     Returns -1s for sample_ids where no sampling took place; valid sample id
     values elsewhere.
     """
 
-    def __init__(self, inputs, sequence_length, embedding, sampling_probability,
+    def __init__(self, inputs, sequence_length, embedding, mode, context, sampling_probability,
                  time_major=False, seed=None, scheduling_seed=None, name=None):
         """Initializer.
 
@@ -901,8 +901,8 @@ class ScheduledEmbeddingTrainingHelper(TrainingHelper):
                     lambda ids: embedding_ops.embedding_lookup(embedding, ids))
 
             self._embedding_args_cnt = len(get_args(self._embedding_fn))
-            if self._embedding_args_cnt != 1 and self._embedding_args_cnt != 2:
-                raise ValueError('`embedding` should expect 1 or 2 arguments.')
+            if self._embedding_args_cnt != 2 and self._embedding_args_cnt != 3:
+                raise ValueError('`embedding` should expect 2 or 3 arguments.')
 
             self._sampling_probability = ops.convert_to_tensor(
                 sampling_probability, name="sampling_probability")
@@ -912,6 +912,8 @@ class ScheduledEmbeddingTrainingHelper(TrainingHelper):
                     "saw shape: %s" % (self._sampling_probability.get_shape()))
             self._seed = seed
             self._scheduling_seed = scheduling_seed
+            self.mode = mode
+            self.context = context
             super(ScheduledEmbeddingTrainingHelper, self).__init__(
                 inputs=inputs,
                 sequence_length=sequence_length,
@@ -959,15 +961,20 @@ class ScheduledEmbeddingTrainingHelper(TrainingHelper):
                 inputs_not_sampling = array_ops.gather_nd(
                     base_next_inputs, where_not_sampling)
 
-                if self._embedding_args_cnt == 1:
-                    sampled_next_inputs = self._embedding_fn(
-                        sample_ids_sampling)
-                elif self._embedding_args_cnt == 2:
+                if self._embedding_args_cnt == 2:
                     # Prepare the position embedding of the next step
                     times = tf.ones(self._batch_size,
                                     dtype=tf.int32) * (time + 1)
-                    sampled_next_inputs = self._embedding_fn(
-                        sample_ids_sampling, times)
+                    sampled_next_inputs = self._embedding_fn(sample_ids_sampling, times)
+                    sampled_next_inputs = tf.concat(
+                        [sampled_next_inputs[:, :(sampled_next_inputs[-1]-self.context.shape[-1])], self.context], axis=-1)
+                elif self._embedding_args_cnt == 3:
+                    # Prepare the position embedding of the next step
+                    times = tf.ones(self._batch_size,
+                                    dtype=tf.int32) * (time + 1)
+                    sampled_next_inputs = self._embedding_fn(sample_ids_sampling, times, self.mode)
+                    sampled_next_inputs = tf.concat(
+                        [sampled_next_inputs[:, :(sampled_next_inputs[-1]-self.context.shape[-1])], self.context], axis=-1)
                 base_shape = array_ops.shape(base_next_inputs)
                 return (array_ops.scatter_nd(indices=where_sampling,
                                              updates=sampled_next_inputs,
@@ -982,7 +989,7 @@ class ScheduledEmbeddingTrainingHelper(TrainingHelper):
             return (finished, next_inputs, state)
 
 
-class ScheduledOutputTrainingHelper(TrainingHelper):
+class GPT2ScheduledOutputTrainingHelper(TrainingHelper):
     """A training helper that adds scheduled sampling directly to outputs.
 
     Returns False for sample_ids where no sampling took place; True elsewhere.
