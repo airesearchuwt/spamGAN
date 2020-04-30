@@ -4,7 +4,7 @@
 	"is_xlnet_trainable": true,
 
 	
-	"sample_strategy": "scheduled",
+	"sample_strategy": "train",
 	"sample_helper": "sample",
 	"beam_width": 4,
 	"infer_topk":16,
@@ -39,10 +39,10 @@
 
 
 	"g_unlab_every_n": 4,
-	"g_pretrain_epochs": 0,
-	"d_pretrain_epochs": 0,
+	"g_pretrain_epochs": 8,
+	"d_pretrain_epochs": 4,
 	"d_pretrain_critic_epochs": 0,
-	"c_pretrain_epochs": 0,
+	"c_pretrain_epochs": 4,
 	"adversarial_epochs": 5,
 
 	"disc_adv_epochs": 1,
@@ -119,7 +119,7 @@
 		"seed": null,
 		"name": "train_data",
 		"datasets": [{
-				"files": ["./gpt2/minrun_train_reviews_bpe.txt"],
+				"files": ["./gpt2/yelp_train_reviews_bpe.txt"],
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
@@ -130,7 +130,7 @@
 				"pad_to_max_seq_length": true
 			},
 			{
-				"files": ["./minrun_train_labels.txt"],
+				"files": ["./gpt2/yelp_train_labels.txt"],
 				"data_type": "int",
 				"data_name": "label"
 			}
@@ -152,7 +152,7 @@
 		"seed": null,
 		"name": "train_data",
 		"datasets": [{
-				"files": ["./gpt2/minrun_train_reviews_bpe_nounsup.txt"],
+				"files": ["./gpt2/yelp_train_reviews_bpe.txt"],
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
@@ -163,7 +163,7 @@
 				"pad_to_max_seq_length": true
 			},
 			{
-				"files": ["./gpt2/minrun_train_labels_nounsup.txt"],
+				"files": ["./gpt2/yelp_train_labels.txt"],
 				"data_type": "int",
 				"data_name": "label"
 			}
@@ -186,7 +186,7 @@
 		"name": "val_data",
 
 		"datasets": [{
-				"files": ["./gpt2/minrun_val_reviews_bpe.txt"],
+				"files": ["./gpt2/yelp_val_reviews_bpe.txt"],
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
@@ -197,7 +197,7 @@
 				"pad_to_max_seq_length": true
 			},
 			{
-				"files": ["./minrun_val_labels.txt"],
+				"files": ["./gpt2/yelp_val_labels.txt"],
 				"data_type": "int",
 				"data_name": "label"
 			}
@@ -218,7 +218,7 @@
 		"seed": null,
 		"name": "test_data",
 		"datasets": [{
-				"files": ["./gpt2/minrun_test_reviews_bpe.txt"],
+				"files": ["./gpt2/yelp_test_reviews_bpe.txt"],
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
@@ -229,7 +229,7 @@
 				"pad_to_max_seq_length": true
 			},
 			{
-				"files": ["minrun_test_labels.txt"],
+				"files": ["./gpt2/yelp_test_labels.txt"],
 				"data_type": "int",
 				"data_name": "label"
 			}
