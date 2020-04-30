@@ -43,16 +43,27 @@ if __name__ == "__main__":
     y = tf.constant([9, 10, 11, 12])
     shape = y.shape
     
+    batch_size = 2
+    time = 16
+    
     sample_ids = tf.constant([1, -1])
     sample_ids_after = tf.reshape(sample_ids, [tf.shape(sample_ids)[0], -1])
+    
+    where_sampling = math_ops.cast(
+        array_ops.where(sample_ids > -1), dtypes.int32)
+    where_not_sampling = math_ops.cast(
+        array_ops.where(sample_ids <= -1), dtypes.int32)
+    
+    times = tf.ones(batch_size, dtype=tf.int32) * (time + 1)
     
     with tf.compat.v1.Session() as sess:
         print("previous: {}".format(sample_ids))
         print("after: {}".format(sample_ids_after))
-        print(math_ops.cast(
-                    array_ops.where(sample_ids_after > -1), dtypes.int32).eval())
-        print(math_ops.cast(
-                    array_ops.where(sample_ids_after <= -1), dtypes.int32).eval())
+        print(where_sampling.eval())
+        print(where_not_sampling.eval())
+        print(array_ops.gather_nd(sample_ids, where_sampling).eval())
+        print(array_ops.gather_nd(sample_ids, where_not_sampling).eval())
+        print("times: {}".format(times.eval()))
 #         print(array_ops.scatter_nd(x, y, shape).eval())
          
     
