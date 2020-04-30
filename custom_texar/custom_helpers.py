@@ -863,7 +863,7 @@ class GPT2ScheduledEmbeddingTrainingHelper(TrainingHelper):
 
     def sample(self, time, outputs, state, name=None):
         """Gets a sample for one step."""
-        with ops.name_scope(name, "ScheduledEmbeddingTrainingHelperSample",
+        with ops.name_scope(name, "GPT2ScheduledEmbeddingTrainingHelperSample",
                             [time, outputs, state]):
             # Return -1s where we did not sample, and sample_ids elsewhere
             select_sampler = tfpd.Bernoulli(
@@ -878,7 +878,7 @@ class GPT2ScheduledEmbeddingTrainingHelper(TrainingHelper):
 
     def next_inputs(self, time, outputs, state, sample_ids, name=None):
         """Gets the outputs for next step."""
-        with ops.name_scope(name, "ScheduledEmbeddingTrainingHelperNextInputs",
+        with ops.name_scope(name, "GPT2ScheduledEmbeddingTrainingHelperNextInputs",
                             [time, outputs, state, sample_ids]):
             (finished, base_next_inputs, state) = (
                 super(GPT2ScheduledEmbeddingTrainingHelper, self).next_inputs(
