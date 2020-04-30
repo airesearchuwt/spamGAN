@@ -909,14 +909,14 @@ class GPT2ScheduledEmbeddingTrainingHelper(TrainingHelper):
                                     dtype=tf.int32) * (time + 1)
                     sampled_next_inputs = self._embedding_fn(sample_ids_sampling, times)
                     sampled_next_inputs = tf.concat(
-                        [sampled_next_inputs[:, :(sampled_next_inputs.shape[-1]-self.context.shape[-1])], self.context], axis=-1)
+                        [sampled_next_inputs[:, :(sampled_next_inputs.shape[-1]-self.context.shape[-1])], self.context[:tf.shape(sampled_next_inputs)[0], :]], axis=-1)
                 elif self._embedding_args_cnt == 3:
                     # Prepare the position embedding of the next step
                     times = tf.ones(tf.shape(sample_ids_sampling)[0],
                                     dtype=tf.int32) * (time + 1)
                     sampled_next_inputs = self._embedding_fn(sample_ids_sampling, times, self.mode)
                     sampled_next_inputs = tf.concat(
-                        [sampled_next_inputs[:, :(sampled_next_inputs.shape[-1]-self.context.shape[-1])], self.context], axis=-1)
+                        [sampled_next_inputs[:, :(sampled_next_inputs.shape[-1]-self.context.shape[-1])], self.context[:tf.shape(sampled_next_inputs)[0], :]], axis=-1)
                 base_shape = array_ops.shape(base_next_inputs)
                 print("base_shape: {}".format(base_shape))
                 return (array_ops.scatter_nd(indices=where_sampling,
