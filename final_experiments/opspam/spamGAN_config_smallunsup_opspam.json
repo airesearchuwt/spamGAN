@@ -39,7 +39,7 @@
 
 
 	"g_unlab_every_n": 4,
-	"g_pretrain_epochs": 0,
+	"g_pretrain_epochs": 8,
 	"d_pretrain_epochs": 4,
 	"d_pretrain_critic_epochs": 0,
 	"c_pretrain_epochs": 4,
@@ -528,8 +528,8 @@
 		"optimizer": {
 			"type": "tensorflow.contrib.opt.AdamWOptimizer",
 			"kwargs": {
-				"weight_decay": 1e-6,
-				"learning_rate": 1e-6
+				"weight_decay": 1e-7,
+				"learning_rate": 6.25e-7
 			}
 		},
 		"learning_rate_decay": {

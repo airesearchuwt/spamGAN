@@ -44,16 +44,16 @@ if __name__ == "__main__":
     shape = y.shape
     
     sample_ids = tf.constant([1, -1])
-    sample_ids_after = tf.reshape(sample_ids, [sample_ids.shape[0], -1])
+    sample_ids_after = tf.reshape(sample_ids, [tf.shape(sample_ids)[0], -1])
     
     with tf.compat.v1.Session() as sess:
         print("previous: {}".format(sample_ids))
         print("after: {}".format(sample_ids_after))
-#         print(math_ops.cast(
-#                     array_ops.where(sample_ids > -1), dtypes.int32).eval())
-#         print(math_ops.cast(
-#                     array_ops.where(sample_ids <= -1), dtypes.int32).eval())
+        print(math_ops.cast(
+                    array_ops.where(sample_ids_after > -1), dtypes.int32).eval())
+        print(math_ops.cast(
+                    array_ops.where(sample_ids_after <= -1), dtypes.int32).eval())
 #         print(array_ops.scatter_nd(x, y, shape).eval())
-        
+         
     
     
