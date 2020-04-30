@@ -9,7 +9,7 @@
 	"beam_width": 4,
 	"infer_topk":16,
 	"sampling_temperature": 1.0,
-	"sampling_probability": 0.3,
+	"sampling_probability": 0.5,
 	
 
 	"restore_model": false,
@@ -65,10 +65,10 @@
 	"clas_patience": 10,
 
 
-	"max_decoding_length": 256,
-	"max_decoding_length_infer": 256,
-	"annealing_length": 256,
-	"adversarial_length": 256,
+	"max_decoding_length": 169,
+	"max_decoding_length_infer": 169,
+	"annealing_length": 169,
+	"adversarial_length": 169,
 	
 
 	"linear_decay_pg_weights": true,
@@ -121,7 +121,7 @@
 		"datasets": [{
 				"files": ["./gpt2/minrun_train_reviews_bpe.txt"],
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
-				"max_seq_length": 256,
+				"max_seq_length": 169,
 				"length_filter_mode": "truncate",
 				"bos_token": "<BOS>",
 				"delimiter": " ",
@@ -154,7 +154,7 @@
 		"datasets": [{
 				"files": ["./gpt2/minrun_train_reviews_bpe_nounsup.txt"],
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
-				"max_seq_length": 256,
+				"max_seq_length": 169,
 				"length_filter_mode": "truncate",
 				"bos_token": "<BOS>",
 				"delimiter": " ",
@@ -188,7 +188,7 @@
 		"datasets": [{
 				"files": ["./gpt2/minrun_val_reviews_bpe.txt"],
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
-				"max_seq_length": 256,
+				"max_seq_length": 169,
 				"length_filter_mode": "truncate",
 				"bos_token": "<BOS>",
 				"delimiter": " ",
@@ -220,7 +220,7 @@
 		"datasets": [{
 				"files": ["./gpt2/minrun_test_reviews_bpe.txt"],
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
-				"max_seq_length": 256,
+				"max_seq_length": 169,
 				"length_filter_mode": "truncate",
 				"bos_token": "<BOS>",
 				"delimiter": " ",
