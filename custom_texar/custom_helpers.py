@@ -905,7 +905,7 @@ class GPT2ScheduledEmbeddingTrainingHelper(TrainingHelper):
                 
                 if self._embedding_args_cnt == 2:
                     # Prepare the position embedding of the next step
-                    times = tf.ones(self._batch_size,
+                    times = tf.ones(tf.shape(sample_ids_sampling)[0],
                                     dtype=tf.int32) * (time + 1)
                     sampled_next_inputs = self._embedding_fn(sample_ids_sampling, times)
                     sampled_next_inputs = tf.concat(
