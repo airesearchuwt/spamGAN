@@ -1,107 +1,44 @@
+## MODIFIED TO ALLOW CLASS EMBEDDING APPENDING
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import tensorflow as tf
-import texar.tf as tx
-from texar.tf.utils.utils import get_args
+# pylint: disable=no-name-in-module
 
+import abc
+
+import six
+
+import tensorflow as tf
+from tensorflow.contrib.seq2seq.python.ops import decoder
+from tensorflow.python.framework import dtypes
+from tensorflow.python.framework import ops
+from tensorflow.python.framework import tensor_shape
 from tensorflow.python.ops import array_ops
+from tensorflow.python.ops import control_flow_ops
+from tensorflow.python.ops import embedding_ops
+from tensorflow.python.ops import gen_array_ops
+from tensorflow.python.ops import math_ops
+from tensorflow.python.ops import tensor_array_ops
 from tensorflow_probability import distributions as tfpd
+from tensorflow.python.util import nest
+
+import texar.tf as tx
+from texar.tf.utils.shapes import shape_list
+from texar.tf.utils.utils import get_args
 
 from texar.tf.modules.embedders.embedder_utils import soft_embedding_lookup
 from texar.tf.utils import utils
 
 
+_transpose_batch_time = decoder._transpose_batch_time  # pylint: disable=protected-access
 
-## MODIFIED TO ALLOW CLASS EMBEDDING APPENDING
-class ContextSoftmaxEmbeddingHelper(tf.contrib.seq2seq.Helper):
-    """A helper that feeds softmax probabilities over vocabulary
-    to the next step.
-    Uses the softmax probability vector to pass through word embeddings to
-    get the next input (i.e., a mixed word embedding).
-    A subclass of
-    :tf_main:`Helper <contrib/seq2seq/Helper>`.
-    Used as a helper to :class:`~texar.modules.RNNDecoderBase` :meth:`_build`
-    in inference mode.
-    Args:
-        embedding: An embedding argument (:attr:`params`) for
-            :tf_main:`tf.nn.embedding_lookup <nn/embedding_lookup>`, or an
-            instance of subclass of :class:`texar.modules.EmbedderBase`.
-            Note that other callables are not acceptable here.
-        start_tokens: An int tensor shaped `[batch_size]`. The
-            start tokens.
-        end_token: An int scalar tensor. The token that marks end of
-            decoding.
-        tau: A float scalar tensor, the softmax temperature.
-        stop_gradient (bool): Whether to stop the gradient backpropagation
-            when feeding softmax vector to the next step.
-        use_finish (bool): Whether to stop decoding once `end_token` is
-            generated. If `False`, decoding will continue until
-            `max_decoding_length` of the decoder is reached.
-    """
 
-    def __init__(self, embedding, context, start_tokens, end_token, tau,
-                 stop_gradient=False, use_finish=True):
-        if isinstance(embedding, tx.modules.EmbedderBase):
-            embedding = embedding.embedding
-
-        if callable(embedding):
-            raise ValueError("`embedding` must be an embedding tensor or an "
-                             "instance of subclass of `EmbedderBase`.")
-        else:
-            self._embedding = embedding
-            self._embedding_fn = (
-                lambda ids: tf.nn.embedding_lookup(embedding, ids))
-        self.context = context
-        self._start_tokens = tf.convert_to_tensor(
-            start_tokens, dtype=tf.int32, name="start_tokens")
-        self._end_token = tf.convert_to_tensor(
-            end_token, dtype=tf.int32, name="end_token")
-        self._start_inputs = self._embedding_fn(self._start_tokens)
-        self._batch_size = tf.size(self._start_tokens)
-        self._start_inputs = tf.concat([self._start_inputs, self.context], axis=-1)
-        self._tau = tau
-        self._stop_gradient = stop_gradient
-        self._use_finish = use_finish
-
-    @property
-    def batch_size(self):
-        return self._batch_size
-
-    @property
-    def sample_ids_dtype(self):
-        return tf.float32
-
-    @property
-    def sample_ids_shape(self):
-        return self._embedding.get_shape()[:1]
-
-    def initialize(self, name=None):
-        finished = tf.tile([False], [self._batch_size])
-        return (finished, self._start_inputs)
-
-    def sample(self, time, outputs, state, name=None):
-        """Returns `sample_id` which is softmax distributions over vocabulary
-        with temperature `tau`. Shape = `[batch_size, vocab_size]`
-        """
-        sample_dist = tf.nn.softmax(outputs / self._tau)
-        sampler = tf.distributions.Categorical(logits=sample_dist)
-        sample_ids = sampler.sample()
-        return sample_ids
-
-    def next_inputs(self, time, outputs, state, sample_ids, name=None):
-        if self._use_finish:
-            hard_ids = tf.argmax(sample_ids, axis=-1, output_type=tf.int32)
-            finished = tf.equal(hard_ids, self._end_token)
-        else:
-            finished = tf.tile([False], [self._batch_size])
-        if self._stop_gradient:
-            sample_ids = tf.stop_gradient(sample_ids)
-        next_inputs = self._embedding_fn(sample_ids)
-        ## Modified
-        next_inputs = tf.concat([next_inputs, self.context], axis=-1)
-        return (finished, next_inputs, state)
+def _unstack_ta(inp):
+    return tensor_array_ops.TensorArray(
+        dtype=inp.dtype, size=array_ops.shape(inp)[0],
+        element_shape=inp.get_shape()[1:]).unstack(inp)
 
 
 class Helper(object):
@@ -892,7 +829,7 @@ class GPT2ScheduledEmbeddingTrainingHelper(TrainingHelper):
         Raises:
           ValueError: if `sampling_probability` is not a scalar or vector.
         """
-        with ops.name_scope(name, "ScheduledEmbeddingSamplingWrapper",
+        with ops.name_scope(name, "GPT2ScheduledEmbeddingTrainingHelper",
                             [embedding, sampling_probability]):
             if callable(embedding):
                 self._embedding_fn = embedding
@@ -914,14 +851,14 @@ class GPT2ScheduledEmbeddingTrainingHelper(TrainingHelper):
             self._scheduling_seed = scheduling_seed
             self.mode = mode
             self.context = context
-            super(ScheduledEmbeddingTrainingHelper, self).__init__(
+            super(GPT2ScheduledEmbeddingTrainingHelper, self).__init__(
                 inputs=inputs,
                 sequence_length=sequence_length,
                 time_major=time_major,
                 name=name)
 
     def initialize(self, name=None):
-        return super(ScheduledEmbeddingTrainingHelper, self).initialize(
+        return super(GPT2ScheduledEmbeddingTrainingHelper, self).initialize(
             name=name)
 
     def sample(self, time, outputs, state, name=None):
@@ -944,7 +881,7 @@ class GPT2ScheduledEmbeddingTrainingHelper(TrainingHelper):
         with ops.name_scope(name, "ScheduledEmbeddingTrainingHelperNextInputs",
                             [time, outputs, state, sample_ids]):
             (finished, base_next_inputs, state) = (
-                super(ScheduledEmbeddingTrainingHelper, self).next_inputs(
+                super(GPT2ScheduledEmbeddingTrainingHelper, self).next_inputs(
                     time=time,
                     outputs=outputs,
                     state=state,
@@ -1020,7 +957,7 @@ class GPT2ScheduledOutputTrainingHelper(TrainingHelper):
         Raises:
           ValueError: if `sampling_probability` is not a scalar or vector.
         """
-        with ops.name_scope(name, "ScheduledOutputTrainingHelper",
+        with ops.name_scope(name, "GPT2ScheduledOutputTrainingHelper",
                             [inputs, auxiliary_inputs, sampling_probability]):
             self._sampling_probability = ops.convert_to_tensor(
                 sampling_probability, name="sampling_probability")
@@ -1050,14 +987,14 @@ class GPT2ScheduledOutputTrainingHelper(TrainingHelper):
 
             self._next_inputs_fn = next_inputs_fn
 
-            super(ScheduledOutputTrainingHelper, self).__init__(
+            super(GPT2ScheduledOutputTrainingHelper, self).__init__(
                 inputs=maybe_concatenated_inputs,
                 sequence_length=sequence_length,
                 time_major=time_major,
                 name=name)
 
     def initialize(self, name=None):
-        return super(ScheduledOutputTrainingHelper, self).initialize(name=name)
+        return super(GPT2ScheduledOutputTrainingHelper, self).initialize(name=name)
 
     def sample(self, time, outputs, state, name=None):
         """Gets a sample for one step."""
@@ -1071,7 +1008,7 @@ class GPT2ScheduledOutputTrainingHelper(TrainingHelper):
         with ops.name_scope(name, "ScheduledOutputTrainingHelperNextInputs",
                             [time, outputs, state, sample_ids]):
             (finished, base_next_inputs, state) = (
-                super(ScheduledOutputTrainingHelper, self).next_inputs(
+                super(GPT2ScheduledOutputTrainingHelper, self).next_inputs(
                     time=time,
                     outputs=outputs,
                     state=state,

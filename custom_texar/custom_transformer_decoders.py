@@ -586,10 +586,11 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             if max_decoding_length is None:
                 max_decoding_length = self._hparams.max_decoding_length
             self.max_decoding_length = max_decoding_length
-            if beam_width is None and decoding_strategy == "infer":  # Inference-like decoding
+            if beam_width is None and (decoding_strategy == "infer" or \
+                                       decoding_strategy == "scheduled"):  # Inference-like decoding
                 # Check helper
                 if helper is None:
-                    raise ValueError("Helper required for inference-like decoding")
+                    raise ValueError(f"Helper required for inference-like decoding")
                 
                 self._helper = helper
                 self._cache = self._init_cache(memory, memory_attention_bias,
