@@ -65,10 +65,10 @@
 	"clas_patience": 10,
 
 
-	"max_decoding_length": 116,
-	"max_decoding_length_infer": 116,
-	"annealing_length": 116,
-	"adversarial_length": 116,
+	"max_decoding_length": 112,
+	"max_decoding_length_infer": 112,
+	"annealing_length": 112,
+	"adversarial_length": 112,
 	
 
 	"linear_decay_pg_weights": true,
@@ -121,7 +121,7 @@
 		"datasets": [{
 				"files": ["./gpt2/minrun_train_reviews_bpe.txt"],
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
-				"max_seq_length": 116,
+				"max_seq_length": 112,
 				"length_filter_mode": "truncate",
 				"bos_token": "<BOS>",
 				"delimiter": " ",
@@ -154,7 +154,7 @@
 		"datasets": [{
 				"files": ["./gpt2/minrun_train_reviews_bpe_nounsup.txt"],
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
-				"max_seq_length": 116,
+				"max_seq_length": 112,
 				"length_filter_mode": "truncate",
 				"bos_token": "<BOS>",
 				"delimiter": " ",
@@ -188,7 +188,7 @@
 		"datasets": [{
 				"files": ["./gpt2/minrun_val_reviews_bpe.txt"],
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
-				"max_seq_length": 116,
+				"max_seq_length": 112,
 				"length_filter_mode": "truncate",
 				"bos_token": "<BOS>",
 				"delimiter": " ",
@@ -220,7 +220,7 @@
 		"datasets": [{
 				"files": ["./gpt2/minrun_test_reviews_bpe.txt"],
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
-				"max_seq_length": 116,
+				"max_seq_length": 112,
 				"length_filter_mode": "truncate",
 				"bos_token": "<BOS>",
 				"delimiter": " ",

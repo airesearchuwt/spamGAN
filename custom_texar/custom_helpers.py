@@ -888,7 +888,6 @@ class GPT2ScheduledEmbeddingTrainingHelper(TrainingHelper):
                     sample_ids=sample_ids,
                     name=name))
             
-#             sample_ids = tf.reshape(sample_ids, [tf.shape(sample_ids)[0], -1])
             def maybe_sample():
                 """Perform scheduled sampling."""
                 where_sampling = math_ops.cast(
@@ -898,10 +897,6 @@ class GPT2ScheduledEmbeddingTrainingHelper(TrainingHelper):
                 sample_ids_sampling = array_ops.gather_nd(sample_ids, where_sampling)
                 inputs_not_sampling = array_ops.gather_nd(
                     base_next_inputs, where_not_sampling)
-                print("sample_ids: {}".format(sample_ids))
-                print("base_next_inputs: {}".format(base_next_inputs))
-                print("where_sampling: {}".format(where_sampling))
-                print("where_not_sampling: {}".format(where_not_sampling))
                 
                 if self._embedding_args_cnt == 2:
                     # Prepare the position embedding of the next step
@@ -918,7 +913,6 @@ class GPT2ScheduledEmbeddingTrainingHelper(TrainingHelper):
                     sampled_next_inputs = tf.concat(
                         [sampled_next_inputs[:, :(sampled_next_inputs.shape[-1]-self.context.shape[-1])], self.context[:tf.shape(sampled_next_inputs)[0], :]], axis=-1)
                 base_shape = array_ops.shape(base_next_inputs)
-                print("base_shape: {}".format(base_shape))
                 return (array_ops.scatter_nd(indices=where_sampling,
                                              updates=sampled_next_inputs,
                                              shape=base_shape)
