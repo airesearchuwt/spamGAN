@@ -9,7 +9,7 @@
 	"beam_width": 4,
 	"infer_topk":16,
 	"sampling_temperature": 1.0,
-	"sampling_probability": 0.5,
+	"sampling_probability": 0.3,
 	
 
 	"restore_model": false,
