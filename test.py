@@ -44,7 +44,7 @@ if __name__ == "__main__":
     shape = y.shape
     
     sample_ids = tf.constant([1, -1])
-    sample_ids_after = tf.reshape(sample_ids, [sample_ids.shape[0], 1])
+    sample_ids_after = tf.reshape(sample_ids, [sample_ids.shape[0], -1])
     
     with tf.compat.v1.Session() as sess:
         print("previous: {}".format(sample_ids))
