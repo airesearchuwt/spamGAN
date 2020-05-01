@@ -346,7 +346,7 @@ def main(config = None):
                 gen_sample_ids = gen_outputs.sample_id
                 
             elif sample_strategy == "train":
-                gen_inputs = inp[:, 1:(tf.shape(inp)[1]-1)]
+                gen_inputs = inp[:, 1:tf.shape(inp)[1]-1]
                 gen_inputs_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(gen_inputs)[1]) # Trim non-ending sentences. 
                 tiled_random_vector = tf.reshape(
                     tf.tile(random_vector, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size+class_size])
@@ -363,7 +363,7 @@ def main(config = None):
                 gen_lengths = get_gen_lengths(gen_sample_ids)
                     
             elif sample_strategy == "scheduled":
-                gen_inputs = inp[:, 1:(tf.shape(inp)[1]-1)]
+                gen_inputs = inp[:, 1:tf.shape(inp)[1]-1]
                 gen_inputs_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(gen_inputs)[1]) # Trim non-ending sentences. 
                 tiled_random_vector = tf.reshape(
                     tf.tile(random_vector, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size+class_size])

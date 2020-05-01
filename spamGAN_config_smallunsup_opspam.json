@@ -4,7 +4,7 @@
 	"is_xlnet_trainable": true,
 
 	
-	"sample_strategy": "scheduled",
+	"sample_strategy": "train",
 	"sample_helper": "sample",
 	"beam_width": 4,
 	"infer_topk":16,
@@ -14,8 +14,8 @@
 
 	"restore_model": false,
 	"clear_run_logs": false,
-	"log_dir": "/tmp",
-	"checkpoint_dir": "/tmp",
+	"log_dir": "/home/hanfeiyu/Pretrained-spamGAN/ckpt",
+	"checkpoint_dir": "/home/hanfeiyu/Pretrained-spamGAN/ckpt",
 	"load_checkpoint_file": null,
 
 	"gen_clas_test": false,
@@ -40,7 +40,7 @@
 
 	"g_unlab_every_n": 4,
 	"g_pretrain_epochs": 0,
-	"d_pretrain_epochs": 0,
+	"d_pretrain_epochs": 4,
 	"d_pretrain_critic_epochs": 0,
 	"c_pretrain_epochs": 0,
 	"adversarial_epochs": 5,
@@ -127,7 +127,7 @@
 				"delimiter": " ",
 				"eos_token": "<EOS>",
 				"data_name": "x",
-				"pad_to_max_seq_length": true
+				"pad_to_max_seq_length": false
 			},
 			{
 				"files": ["./minrun_train_labels.txt"],
@@ -160,7 +160,7 @@
 				"delimiter": " ",
 				"eos_token": "<EOS>",
 				"data_name": "x",
-				"pad_to_max_seq_length": true
+				"pad_to_max_seq_length": false
 			},
 			{
 				"files": ["./gpt2/minrun_train_labels_nounsup.txt"],
@@ -194,7 +194,7 @@
 				"delimiter": " ",
 				"eos_token": "<EOS>",
 				"data_name": "x",
-				"pad_to_max_seq_length": true
+				"pad_to_max_seq_length": false
 			},
 			{
 				"files": ["./minrun_val_labels.txt"],
@@ -226,7 +226,7 @@
 				"delimiter": " ",
 				"eos_token": "<EOS>",
 				"data_name": "x",
-				"pad_to_max_seq_length": true
+				"pad_to_max_seq_length": false
 			},
 			{
 				"files": ["minrun_test_labels.txt"],

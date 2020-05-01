@@ -125,9 +125,9 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 self._output_layer, self._vocab_size = _make_output_layer(
                     output_layer, vocab_size, self._hparams.output_layer_bias,
                     self.variable_scope)
-                self._dropout_layer = tf.layers.Dropout(
+                self._dropout_layer = tf.keras.layers.Dropout(
                     rate=self._hparams["output_layer"]["dropout_rate"],
-                    name="{}_{}".format(self._hparams["output_layer"]["name"], "dropout"))
+                    )
             else:
                 self._vocab_size = vocab_size
                 self._output_layer = tf.layers.Dense(
@@ -135,9 +135,9 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     activation=self._hparams["output_layer"]["activation"],
                     name=self._hparams["output_layer"]["name"]
                     )
-                self._dropout_layer = tf.layers.Dropout(
+                self._dropout_layer = tf.keras.layers.Dropout(
                     rate=self._hparams["output_layer"]["dropout_rate"],
-                    name="{}_{}".format(self._hparams["output_layer"]["name"], "dropout"))
+                    )
                 
             # Make attention and poswise networks
             self.multihead_attentions = {
