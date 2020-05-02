@@ -44,10 +44,10 @@ class SpecialTokens(object):
     :attr:`UNK`. These tokens will by default have token ids 0, 1, 2, 3,
     respectively.
     """
-    PAD = "<PAD>"
-    BOS = "<BOS>"
-    EOS = "<EOS>"
-    UNK = "<UNK>"
+    PAD = "<|padding|>"
+    BOS = "<|startoftext|>"
+    EOS = "<|endoftext|>"
+    UNK = "<|unknown|>"
 
 
 def _make_defaultdict(keys, values, default_value):
@@ -149,8 +149,7 @@ class Vocab(object):
         warnings.simplefilter("default", UnicodeWarning)
 
         # Places _pad_token at the beginning to make sure it take index 0.
-#         vocab = [self._pad_token, self._bos_token, self._eos_token,
-#                  self._unk_token] + vocab
+        vocab = vocab[:-2] + [self._bos_token, self._eos_token]
         # Must make sure this is consistent with the above line
         unk_token_idx = 3
         vocab_size = len(vocab)

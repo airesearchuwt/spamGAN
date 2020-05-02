@@ -122,11 +122,11 @@
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<BOS>",
+				"bos_token": "<|startoftext|>",
 				"delimiter": " ",
-				"eos_token": "<EOS>",
+				"eos_token": "<|endoftext|>",
 				"data_name": "x",
-				"pad_to_max_seq_length": true
+				"pad_to_max_seq_length": false
 			},
 			{
 				"files": ["./minrun_train_labels.txt"],
@@ -155,11 +155,11 @@
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<BOS>",
+				"bos_token": "<|startoftext|>",
 				"delimiter": " ",
-				"eos_token": "<EOS>",
+				"eos_token": "<|endoftext|>",
 				"data_name": "x",
-				"pad_to_max_seq_length": true
+				"pad_to_max_seq_length": false
 			},
 			{
 				"files": ["./gpt2/minrun_train_labels_nounsup.txt"],
@@ -189,11 +189,11 @@
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<BOS>",
+				"bos_token": "<|startoftext|>",
 				"delimiter": " ",
-				"eos_token": "<EOS>",
+				"eos_token": "<|endoftext|>",
 				"data_name": "x",
-				"pad_to_max_seq_length": true
+				"pad_to_max_seq_length": false
 			},
 			{
 				"files": ["./minrun_val_labels.txt"],
@@ -221,11 +221,11 @@
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<BOS>",
+				"bos_token": "<|startoftext|>",
 				"delimiter": " ",
-				"eos_token": "<EOS>",
+				"eos_token": "<|endoftext|>",
 				"data_name": "x",
-				"pad_to_max_seq_length": true
+				"pad_to_max_seq_length": false
 			},
 			{
 				"files": ["minrun_test_labels.txt"],
