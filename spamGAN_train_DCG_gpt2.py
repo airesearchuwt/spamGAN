@@ -272,7 +272,7 @@ def main(config = None):
             sample_strategy = config["sample_strategy"]
             sample_helper = config["sample_helper"]
             softmax_temperature = tf.constant(config["sampling_temperature"], dtype=tf.float32)
-            logger.info("Sampling using strategy: {}...".format(sample_strategy))
+            logger.info("Sampling using strategy: {}_{}...".format(sample_strategy, sample_helper))
             
             # Obtain lengths of generated sentences 
             def get_gen_lengths(gen_sample_ids):
