@@ -41,7 +41,7 @@
 	"g_pretrain_epochs": 10,
 	"d_pretrain_epochs": 4,
 	"d_pretrain_critic_epochs": 0,
-	"c_pretrain_epochs": 4,
+	"c_pretrain_epochs": 10,
 	"adversarial_epochs": 5,
 
 	"disc_adv_epochs": 1,
@@ -126,7 +126,7 @@
 				"delimiter": " ",
 				"eos_token": "<|endoftext|>",
 				"data_name": "x",
-				"pad_to_max_seq_length": false
+				"pad_to_max_seq_length": true
 			},
 			{
 				"files": ["./minrun_train_labels.txt"],
@@ -159,7 +159,7 @@
 				"delimiter": " ",
 				"eos_token": "<|endoftext|>",
 				"data_name": "x",
-				"pad_to_max_seq_length": false
+				"pad_to_max_seq_length": true
 			},
 			{
 				"files": ["./gpt2/minrun_train_labels_nounsup.txt"],
@@ -193,7 +193,7 @@
 				"delimiter": " ",
 				"eos_token": "<|endoftext|>",
 				"data_name": "x",
-				"pad_to_max_seq_length": false
+				"pad_to_max_seq_length": true
 			},
 			{
 				"files": ["./minrun_val_labels.txt"],
@@ -225,7 +225,7 @@
 				"delimiter": " ",
 				"eos_token": "<|endoftext|>",
 				"data_name": "x",
-				"pad_to_max_seq_length": false
+				"pad_to_max_seq_length": true
 			},
 			{
 				"files": ["minrun_test_labels.txt"],
@@ -527,8 +527,8 @@
 		"optimizer": {
 			"type": "tensorflow.contrib.opt.AdamWOptimizer",
 			"kwargs": {
-				"weight_decay": 1e-5,
-				"learning_rate": 6.25e-5
+				"weight_decay": 1e-8,
+				"learning_rate": 6.25e-8
 			}
 		},
 		"learning_rate_decay": {
