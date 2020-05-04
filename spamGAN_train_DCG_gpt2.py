@@ -1728,9 +1728,7 @@ def main(config = None):
             # Check if testing
             if config["gen_clas_test"] is not None and config["gen_clas_test"]:
                 dict_all_res = {}
-                dict_bestclas_pretrain_res = {}
                 dict_bestclas_acc_res = {}
-                dict_bestclas_f1_res = {}
                 dict_bestclas_mixed_res = {}
                 
                 for ckpt in config["clas_test_ckpts"]:
@@ -1755,24 +1753,16 @@ def main(config = None):
                         dict_all_res["accuracy"] = clas_test_outputs["real_acc"]
                         dict_all_res["f1 score"] = clas_test_outputs["real_f1"]
                         dict_all_res["perplexity"] = gen_test_outputs["perp"]
-                    elif "ckpt-bestclas-pretrain" in ckpt:
-                        dict_bestclas_pretrain_res["accuracy"] = clas_test_outputs["real_acc"]
-                        dict_bestclas_pretrain_res["f1 score"] = clas_test_outputs["real_f1"]
-                        dict_bestclas_pretrain_res["perplexity"] = gen_test_outputs["perp"]
                     elif "ckpt-bestclas-acc" in ckpt:
                         dict_bestclas_acc_res["accuracy"] = clas_test_outputs["real_acc"]
                         dict_bestclas_acc_res["f1 score"] = clas_test_outputs["real_f1"]
                         dict_bestclas_acc_res["perplexity"] = gen_test_outputs["perp"]
-                    elif "ckpt-bestclas-f1" in ckpt:
-                        dict_bestclas_f1_res["accuracy"] = clas_test_outputs["real_acc"]
-                        dict_bestclas_f1_res["f1 score"] = clas_test_outputs["real_f1"]
-                        dict_bestclas_f1_res["perplexity"] = gen_test_outputs["perp"]
                     elif "ckpt-bestclas-mixed" in ckpt:
                         dict_bestclas_mixed_res["accuracy"] = clas_test_outputs["real_acc"]
                         dict_bestclas_mixed_res["f1 score"] = clas_test_outputs["real_f1"]
                         dict_bestclas_mixed_res["perplexity"] = gen_test_outputs["perp"]
                     
-                return dict_all_res, dict_bestclas_pretrain_res, dict_bestclas_acc_res, dict_bestclas_f1_res, dict_bestclas_mixed_res
+                return dict_all_res, dict_bestclas_acc_res, dict_bestclas_mixed_res
             
 
             g.finalize()
@@ -1887,8 +1877,6 @@ def main(config = None):
                 clas_pretrain_time = clas_pretrain_time + clas_rtns["total_runtime"]
                 if clas_rtns['loss'] < min_loss:
                     min_loss = clas_rtns['loss']
-                    checkpoint.save(sess, os.path.join(checkpoint_dir, 'ckpt-bestclas-pretrain'))
-
 
             logger.info('\nMin Clas Pretrain val loss: {}'.format(min_loss))
             logger.info("\nTotal runtime after classifier pretrain: {}".format(total_runtime))
@@ -1899,7 +1887,6 @@ def main(config = None):
 
 
             clas_adv_max_acc = 0
-            clas_adv_max_f1 = 0
             clas_adv_max_mixed = 0
             breaking_gen_now = True
             
@@ -1980,15 +1967,11 @@ def main(config = None):
                     if current_acc > clas_adv_max_acc:
                         clas_adv_max_acc = current_acc
                         checkpoint.save(sess, os.path.join(checkpoint_dir, 'ckpt-bestclas-acc'))
-                    if current_f1 > clas_adv_max_f1:
-                        clas_adv_max_f1 = current_f1
-                        checkpoint.save(sess, os.path.join(checkpoint_dir, 'ckpt-bestclas-f1'))
                     if current_mixed > clas_adv_max_mixed:
                         clas_adv_max_mixed = current_mixed
                         checkpoint.save(sess, os.path.join(checkpoint_dir, 'ckpt-bestclas-mixed'))
                             
                 logger.info('\nMax Clas Adv val acc: {}'.format(clas_adv_max_acc))
-                logger.info('Max Clas Adv val f1: {}'.format(clas_adv_max_f1))
                 logger.info('Max Clas Adv val mixed: {}'.format(clas_adv_max_mixed))
                 
                 logger.info("\nTotal runtime after classifier adv-train: {}".format(total_runtime))
@@ -2067,9 +2050,7 @@ if __name__ == "__main__":
                     if "usp{}".format(int(unsup_pcent * 100)) in config_file:
                         time_result_file = 'tr{}_usp{}_time'.format(int(train_pcent*100), int(unsup_pcent * 100))
                         all_result_file = 'tr{}_usp{}_all'.format(int(train_pcent*100), int(unsup_pcent * 100))
-                        bestclas_pretrain_result_file = 'tr{}_usp{}_bestclas_pretrain'.format(int(train_pcent*100), int(unsup_pcent * 100))
                         bestclas_acc_result_file = 'tr{}_usp{}_bestclas_acc'.format(int(train_pcent*100), int(unsup_pcent * 100))
-                        bestclas_f1_result_file = 'tr{}_usp{}_bestclas_f1'.format(int(train_pcent*100), int(unsup_pcent * 100))
                         bestclas_mixed_result_file = 'tr{}_usp{}_bestclas_mixed'.format(int(train_pcent*100), int(unsup_pcent * 100))
                         break
                     else:
@@ -2081,10 +2062,7 @@ if __name__ == "__main__":
         resultdir = os.path.join(BASEDIR, "result")
         data_paths["time_result_file"] = os.path.join(resultdir, time_result_file)
         data_paths["all_result_file"] = os.path.join(resultdir, all_result_file)
-        data_paths["bestclas_pretrain_result_file"] = os.path.join(resultdir, bestclas_pretrain_result_file)
         data_paths["bestclas_acc_result_file"] = os.path.join(resultdir, bestclas_acc_result_file)
-        data_paths["bestclas_f1_result_file"] = os.path.join(resultdir, bestclas_f1_result_file)
-        data_paths["bestclas_mixed_result_file"] = os.path.join(resultdir, bestclas_mixed_result_file)
         data_paths["bestclas_mixed_result_file"] = os.path.join(resultdir, bestclas_mixed_result_file)
     
         # Train or test
@@ -2113,15 +2091,6 @@ if __name__ == "__main__":
             w.writerow(dict_all_res)
             f.close()
             
-            bestclas_pretrain_file_exists = os.path.isfile(data_paths["bestclas_pretrain_result_file"])
-            f = open(data_paths["bestclas_pretrain_result_file"],'a')
-            w = csv.DictWriter(f, dict_bestclas_pretrain_res.keys())
-            if not bestclas_pretrain_file_exists:
-                print("Writing bestclas-pretrain header...")
-                w.writeheader()
-            w.writerow(dict_bestclas_pretrain_res)
-            f.close()
-            
             bestclas_acc_file_exists = os.path.isfile(data_paths["bestclas_acc_result_file"])
             f = open(data_paths["bestclas_acc_result_file"],'a')
             w = csv.DictWriter(f, dict_bestclas_acc_res.keys())
@@ -2129,15 +2098,6 @@ if __name__ == "__main__":
                 print("Writing bestclas-acc header...")
                 w.writeheader()
             w.writerow(dict_bestclas_acc_res)
-            f.close()
-            
-            bestclas_f1_file_exists = os.path.isfile(data_paths["bestclas_f1_result_file"])
-            f = open(data_paths["bestclas_f1_result_file"],'a')
-            w = csv.DictWriter(f, dict_bestclas_f1_res.keys())
-            if not bestclas_f1_file_exists:
-                print("Writing bestclas-f1 header...")
-                w.writeheader()
-            w.writerow(dict_bestclas_f1_res)
             f.close()
             
             bestclas_mixed_file_exists = os.path.isfile(data_paths["bestclas_mixed_result_file"])

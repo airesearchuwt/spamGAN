@@ -68,9 +68,7 @@ def make_data(trp, usp, run):
         'vocab' : os.path.join(BASEDIR, "gpt2_vocab.txt"),
         'clas_test_ckpts' : [
             "ckpt-all",
-            "ckpt-bestclas-pretrain",
             "ckpt-bestclas-acc",
-            "ckpt-bestclas-f1",
             "ckpt-bestclas-mixed"
             ],
         'clas_pred_output' : "testpreds.txt",
