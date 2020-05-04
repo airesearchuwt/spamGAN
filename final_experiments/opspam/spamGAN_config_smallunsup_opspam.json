@@ -5,9 +5,9 @@
 
 	
 	"sample_strategy": "train",
-	"sample_helper": "topk_sample",
+	"sample_helper": "sample",
 	"sample_topk": 16,
-	"sample_temperature": 1.0,
+	"sample_temperature": 10.0,
 	"sample_probability": 0.5,
 	"beam_width": 4,
 	
@@ -39,7 +39,7 @@
 	"g_pretrain_epochs": 10,
 	"d_pretrain_epochs": 4,
 	"d_pretrain_critic_epochs": 0,
-	"c_pretrain_epochs": 5,
+	"c_pretrain_epochs": 4,
 	"adversarial_epochs": 5,
 
 	"disc_adv_epochs": 1,
@@ -525,8 +525,8 @@
 		"optimizer": {
 			"type": "tensorflow.contrib.opt.AdamWOptimizer",
 			"kwargs": {
-				"weight_decay": 1e-9,
-				"learning_rate": 1e-7
+				"weight_decay": 1e-5,
+				"learning_rate": 6.25e-5
 			}
 		},
 		"learning_rate_decay": {
