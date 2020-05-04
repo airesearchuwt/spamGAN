@@ -6,8 +6,8 @@
 	
 	"sample_strategy": "train",
 	"sample_helper": "sample",
-	"sample_topk": 16,
-	"sample_temperature": 10.0,
+	"sample_topk": 8,
+	"sample_temperature": 1.0,
 	"sample_probability": 0.5,
 	"beam_width": 4,
 	

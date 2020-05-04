@@ -601,8 +601,8 @@ class GPT2Stack():
                  helper=None,
                  mode=None,
                  mle_context=None, # spamGAN MLE generator context
-                 sample_context=None # spamGAN sample generator context
-                 ):
+                 sample_context=None, # spamGAN sample generator context
+                 top_k=0):
         r"""Performs decoding. Has exact the same interfaces with
         :meth:`texar.tf.modules.TransformerDecoder._build` except inputs
         which is a tensor with shape `[batch_size, max_time]`. Please refer to
@@ -650,7 +650,8 @@ class GPT2Stack():
                 embedding=lambda a, b, mode: self.embed_tokens(a, b, mode), # Introduce mode 
                 helper=helper,
                 mode=mode,
-                sample_context=sample_context # spamGAN sample generator context
+                sample_context=sample_context, # spamGAN sample generator context
+                top_k=top_k
                 )
         else:
             outputs = self.encoder._build(

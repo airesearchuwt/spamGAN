@@ -28,6 +28,7 @@ import collections
 
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import Decoder as TFDecoder
+from tensorflow_probability import distributions as tfpd
 
 from texar.tf.core import layers
 from texar.tf.module_base import ModuleBase
@@ -358,7 +359,8 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                embedding=None,
                helper=None,
                mode=None,
-               sample_context=None
+               sample_context=None,
+               top_k=0
                ):
         """Performs decoding.
 
@@ -539,6 +541,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         self.embedding = embedding
         self.mode = mode
         self.softmax_temperature = softmax_temperature
+        self.top_k = top_k
         
         # Record sample context, which will be used in "infer_sample" and "beam_search"
         if sample_context is not None:
@@ -548,7 +551,8 @@ class TransformerDecoder(ModuleBase, TFDecoder):
 
         if helper is None and beam_width is None and \
                 (decoding_strategy == "train_greedy" or \
-                 decoding_strategy == "train_sample"):  # Teacher-forcing
+                 decoding_strategy == "train_sample" or \
+                 decoding_strategy == "train_topk_output_sample"):  # Teacher-forcing
             decoder_self_attention_bias = (
                 attn.attention_bias_lower_triangle(
                     shape_list(inputs)[1]))
@@ -566,16 +570,22 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             
             if self._encode_mode is False:
                 if decoding_strategy == "train_greedy":
-                    preds = tf.cast(tf.argmax(logits, axis=-1), tf.int32)
-                else: # Train-sample decoding
+                    sample_ids = tf.cast(tf.argmax(logits, axis=-1), tf.int32)
+                elif "train_sample": # Train-sample decoding
                     if self.softmax_temperature is not None:
                         logits = logits / self.softmax_temperature
-                    sample_id_sampler = tf.distributions.Categorical(logits=logits)
-                    preds = sample_id_sampler.sample(seed=None)
+                    sample_id_sampler = tfpd.Categorical(logits=logits)
+                    sample_ids = sample_id_sampler.sample(seed=None)
+                elif "train_topk_output_sample": # Train top-k sample decoding
+                    if self.softmax_temperature is not None:
+                        logits = logits / self.softmax_temperature
+                    logits = custom_helpers._top_k_logits(logits, k=self.top_k)
+                    sample_id_sampler = tfpd.Categorical(logits=logits)
+                    sample_ids = sample_id_sampler.sample(seed=None)
                 
                 rets = TransformerDecoderOutput(
                         logits=logits,
-                        sample_id=preds
+                        sample_id=sample_ids
                     )
             else:
                 rets = TransformerDecoderEncodeOutput(

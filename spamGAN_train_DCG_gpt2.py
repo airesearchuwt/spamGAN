@@ -370,6 +370,24 @@ def main(config = None):
                         )
                     gen_logits = gen_outputs.logits
                     gen_sample_ids = gen_outputs.sample_id
+                elif sample_helper == "topk_output_sample":
+                    top_k = config["sample_topk"]
+                    gen_inputs = inp[:, 1:tf.shape(inp)[1]-1]
+                    gen_inputs_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(gen_inputs)[1]) # Trim non-ending sentences. 
+                    tiled_random_vector = tf.reshape(
+                        tf.tile(random_vector, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size+class_size])
+                    
+                    gen_outputs = generator(
+                        decoding_strategy="train_topk_output_sample",
+                        inputs=gen_inputs,
+                        softmax_temperature=softmax_temperature,
+                        mode=generator_dropout,
+                        mle_context=tiled_random_vector,
+                        top_k=top_k
+                        )
+                    gen_logits = gen_outputs.logits
+                    gen_sample_ids = gen_outputs.sample_id
+                    gen_lengths = get_gen_lengths(gen_sample_ids)
                 else:
                     gen_inputs = inp[:, 1:tf.shape(inp)[1]-1]
                     gen_inputs_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(gen_inputs)[1]) # Trim non-ending sentences. 
