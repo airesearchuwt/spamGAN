@@ -24,9 +24,7 @@
 	"clas_test": false,
 	"clas_test_ckpts": [
 		"ckpt-all",
-		"ckpt-bestclas-pretrain",
 		"ckpt-bestclas-acc",
-		"ckpt-bestclas-f1",
 		"ckpt-bestclas-mixed"
 	],
 	"clas_pred_output": "testpreds.txt",
@@ -122,9 +120,9 @@
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<BOS>",
+				"bos_token": "<|startoftext|>",
 				"delimiter": " ",
-				"eos_token": "<EOS>",
+				"eos_token": "<|endoftext|>",
 				"data_name": "x",
 				"pad_to_max_seq_length": true
 			},

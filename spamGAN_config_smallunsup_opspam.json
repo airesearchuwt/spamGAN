@@ -6,7 +6,7 @@
 	
 	"sample_strategy": "train",
 	"sample_helper": "topk_sample",
-	"sample_topk": 16,
+	"sample_topk": 8,
 	"sample_temperature": 1.0,
 	"sample_probability": 0.5,
 	"beam_width": 4,
@@ -36,7 +36,7 @@
 	"batches_per_text_summary": 100,
 
 
-	"g_pretrain_epochs": 10,
+	"g_pretrain_epochs": 0,
 	"d_pretrain_epochs": 4,
 	"d_pretrain_critic_epochs": 0,
 	"c_pretrain_epochs": 5,
