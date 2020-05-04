@@ -794,6 +794,121 @@ class TrainingHelper(Helper):
                 all_finished, lambda: self._zero_inputs,
                 lambda: nest.map_structure(read_from_ta, self._input_tas))
             return (finished, next_inputs, state)
+        
+        
+class GPT2TopKTrainingHelper(Helper):
+    """A helper for use during training. Performs teacher-forcing decoding.
+
+    Returned sample_ids are the argmax of the RNN output logits.
+
+    Note that for teacher-forcing decoding, Texar's decoders provide a simpler
+    interface by specifying `decoding_strategy='train_greedy'` when calling a
+    decoder (see, e.g.,,
+    :meth:`RNN decoder <texar.tf.modules.RNNDecoderBase._build>`). In this case,
+    use of TrainingHelper is not necessary.
+    """
+
+    def __init__(self, inputs, sequence_length, top_k=0, 
+                 softmax_temperature=None, seed=None, time_major=False, name=None):
+        """Initializer.
+
+        Args:
+          inputs: A (structure of) input tensors.
+          sequence_length: An int32 vector tensor.
+          time_major: Python bool.  Whether the tensors in `inputs` are time major.
+            If `False` (default), they are assumed to be batch major.
+          name: Name scope for any created operations.
+
+        Raises:
+          ValueError: if `sequence_length` is not a 1D tensor.
+        """
+        with ops.name_scope(name, "GPT2TopKTrainingHelper", [inputs, sequence_length]):
+            inputs = ops.convert_to_tensor(inputs, name="inputs")
+            self._inputs = inputs
+            if not time_major:
+                inputs = nest.map_structure(_transpose_batch_time, inputs)
+
+            self._input_tas = nest.map_structure(_unstack_ta, inputs)
+            self._sequence_length = ops.convert_to_tensor(
+                sequence_length, name="sequence_length")
+            if self._sequence_length.get_shape().ndims != 1:
+                raise ValueError(
+                    "Expected sequence_length to be a vector, but received shape: %s" %
+                    self._sequence_length.get_shape())
+
+            self._zero_inputs = nest.map_structure(
+                lambda inp: array_ops.zeros_like(inp[0, :]), inputs)
+            self._start_inputs = self._zero_inputs
+            self._batch_size = shape_list(sequence_length)[0]
+            
+            self._top_k = top_k
+            self._softmax_temperature = softmax_temperature
+            self._seed = seed
+
+    @property
+    def inputs(self):
+        return self._inputs
+
+    @property
+    def sequence_length(self):
+        return self._sequence_length
+
+    @property
+    def batch_size(self):
+        return self._batch_size
+
+    @property
+    def sample_ids_shape(self):
+        return tensor_shape.TensorShape([])
+
+    @property
+    def sample_ids_dtype(self):
+        return dtypes.int32
+
+    def initialize(self, name=None):
+        with ops.name_scope(name, "GPT2TopKTrainingHelperInitialize"):
+            finished = math_ops.equal(0, self._sequence_length)
+            all_finished = math_ops.reduce_all(finished)
+            next_inputs = control_flow_ops.cond(
+                all_finished, lambda: self._zero_inputs,
+                lambda: nest.map_structure(lambda inp: inp.read(0), self._input_tas))
+            return (finished, next_inputs)
+
+    def sample(self, time, outputs, name=None, **unused_kwargs):
+        """Gets a sample for one step, perform top k sampling"""
+        with ops.name_scope(name, "GPT2TopKTrainingHelperSample", [time, outputs]):
+            # Outputs are logits, we sample from the top_k candidates
+            if not isinstance(outputs, tf.Tensor):
+                raise TypeError("Expected outputs to be a single Tensor, got: %s" %
+                                type(outputs))
+            if self._softmax_temperature is None:
+                logits = outputs
+            else:
+                logits = outputs / self._softmax_temperature
+    
+            logits = _top_k_logits(logits, k=self._top_k)
+    
+            sample_id_sampler = tfpd.Categorical(logits=logits)
+            sample_ids = sample_id_sampler.sample(seed=self._seed)
+    
+            return sample_ids
+        
+    def next_inputs(self, time, outputs, state, name=None, **unused_kwargs):
+        """Gets the inputs for next step."""
+        with ops.name_scope(name, "TrainingHelperNextInputs",
+                            [time, outputs, state]):
+            next_time = time + 1
+            finished = (next_time >= self._sequence_length)
+            all_finished = math_ops.reduce_all(finished)
+
+            def read_from_ta(inp):
+                return inp.read(next_time)
+
+            next_inputs = control_flow_ops.cond(
+                all_finished, lambda: self._zero_inputs,
+                lambda: nest.map_structure(read_from_ta, self._input_tas))
+            return (finished, next_inputs, state)
+
 
 
 class GPT2ScheduledEmbeddingTrainingHelper(TrainingHelper):

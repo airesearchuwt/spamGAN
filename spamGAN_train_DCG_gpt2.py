@@ -80,12 +80,6 @@ def print_out_array(header_names, value_lists, logger, final_line=None):
         logger.debug(final_line)
 
 
-def get_vocab(train_lm_only, d):
-    if train_lm_only:
-        return d.vocab
-    else:
-        return d.vocab('x')
-    
 
 def main(config = None):
     
@@ -271,7 +265,6 @@ def main(config = None):
             # Specify sample strategy
             sample_strategy = config["sample_strategy"]
             sample_helper = config["sample_helper"]
-            softmax_temperature = tf.constant(config["sampling_temperature"], dtype=tf.float32)
             logger.info("Sampling using strategy: {}_{}...".format(sample_strategy, sample_helper))
             
             # Obtain lengths of generated sentences 
@@ -285,6 +278,8 @@ def main(config = None):
                 return gen_lengths
             
             if sample_strategy == "infer":
+                softmax_temperature = config["sample_temperature"]
+                
                 if sample_helper == "greedy":
                     gpt2_context_helper = custom_helpers.GPT2ContextGreedyEmbeddingHelper(
                         embedding=gen_embedder, 
@@ -305,7 +300,7 @@ def main(config = None):
                         softmax_temperature=softmax_temperature
                         )
                 elif sample_helper == "topk_sample":
-                    topk = config["infer_topk"]
+                    topk = config["sample_topk"]
                     gpt2_context_helper = custom_helpers.GPT2ContextTopKSampleEmbeddingHelper(
                         embedding=gen_embedder, 
                         mode=generator_dropout, 
@@ -346,21 +341,51 @@ def main(config = None):
                 gen_sample_ids = gen_outputs.sample_id
                 
             elif sample_strategy == "train":
+                softmax_temperature = config["sample_temperature"]
                 gen_inputs = inp[:, 1:tf.shape(inp)[1]-1]
                 gen_inputs_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(gen_inputs)[1]) # Trim non-ending sentences. 
                 tiled_random_vector = tf.reshape(
                     tf.tile(random_vector, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size+class_size])
                 
-                gen_outputs = generator(
-                    decoding_strategy="train_sample" if sample_helper == "sample" else "train_greedy",
-                    inputs=gen_inputs,
-                    softmax_temperature=config["sampling_temperature"],
-                    mode=generator_dropout,
-                    mle_context=tiled_random_vector
-                    )
-                gen_logits = gen_outputs.logits
-                gen_sample_ids = gen_outputs.sample_id
-                gen_lengths = get_gen_lengths(gen_sample_ids)
+                if sample_helper == "topk_sample":
+                    top_k = config["sample_topk"]
+                    gen_inputs_time = tf.expand_dims(tf.range(tf.shape(gen_inputs)[1] ), 0)
+                    gen_inputs_time = tf.broadcast_to(gen_inputs_time, [tf.shape(gen_inputs)[0], tf.shape(gen_inputs)[1] ])
+                    gen_inputs_emb = gen_embedder(gen_inputs, gen_inputs_time, generator_dropout)
+                    gen_inputs_emb = tf.concat(
+                        [gen_inputs_emb[:, :, :(gen_inputs_emb.shape[-1]-tiled_random_vector.shape[-1])], tiled_random_vector], axis = -1)
+                    
+                    gpt2_context_helper = custom_helpers.GPT2TopKTrainingHelper(
+                        inputs=gen_inputs_emb,
+                        sequence_length=gen_inputs_lengths,
+                        top_k=top_k, 
+                        softmax_temperature=softmax_temperature 
+                        )
+                    
+                    gen_outputs, gen_lengths = generator(
+                        decoding_strategy="train_topk_sample",
+                        helper=gpt2_context_helper,
+                        mode=generator_dropout,
+                        max_decoding_length=max_length
+                        )
+                    gen_logits = gen_outputs.logits
+                    gen_sample_ids = gen_outputs.sample_id
+                else:
+                    gen_inputs = inp[:, 1:tf.shape(inp)[1]-1]
+                    gen_inputs_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(gen_inputs)[1]) # Trim non-ending sentences. 
+                    tiled_random_vector = tf.reshape(
+                        tf.tile(random_vector, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size+class_size])
+                    
+                    gen_outputs = generator(
+                        decoding_strategy="train_sample" if sample_helper == "sample" else "train_greedy",
+                        inputs=gen_inputs,
+                        softmax_temperature=softmax_temperature,
+                        mode=generator_dropout,
+                        mle_context=tiled_random_vector
+                        )
+                    gen_logits = gen_outputs.logits
+                    gen_sample_ids = gen_outputs.sample_id
+                    gen_lengths = get_gen_lengths(gen_sample_ids)
                     
             elif sample_strategy == "scheduled":
                 gen_inputs = inp[:, 1:tf.shape(inp)[1]-1]
@@ -374,22 +399,22 @@ def main(config = None):
                     [gen_inputs_emb[:, :, :(gen_inputs_emb.shape[-1]-tiled_random_vector.shape[-1])], tiled_random_vector], axis = -1)
                     
                 if sample_helper == "sample":
-                    sampling_probability = config["sampling_probability"]
+                    sample_probability = config["sample_probability"]
                     gpt2_context_helper = custom_helpers.GPT2ScheduledEmbeddingTrainingHelper(
                         inputs=gen_inputs_emb,
                         sequence_length=gen_inputs_lengths,
                         embedding=gen_embedder, 
                         mode=generator_dropout,
                         context=random_vector, 
-                        sampling_probability=sampling_probability, 
+                        sampling_probability=sample_probability, 
                         )
                     
                     gen_outputs, gen_lengths = generator(
-                    decoding_strategy="scheduled",
-                    helper=gpt2_context_helper,
-                    mode=generator_dropout,
-                    max_decoding_length=max_length
-                    )
+                        decoding_strategy="scheduled",
+                        helper=gpt2_context_helper,
+                        mode=generator_dropout,
+                        max_decoding_length=max_length
+                        )
                     gen_logits = gen_outputs.logits
                     gen_sample_ids = gen_outputs.sample_id
                 else:
@@ -422,6 +447,9 @@ def main(config = None):
                     gen_sample_ids = gen_outputs.sample_id[:, :, 0] # Only take the best beam
                 gen_lengths = get_gen_lengths(gen_sample_ids)
                 
+            else:
+                raise KeyError(f'Unknown sampling strategy')
+            
             # Inefficient, use tf.gather
             observed_gen_logits = tf.zeros_like(gen_sample_ids)
             
@@ -1774,12 +1802,10 @@ def main(config = None):
                 gen_pretrain_time = gen_pretrain_time + gen_rtns["total_runtime"]
                 logger.info('\nGen Val loss:{}'.format(gen_rtns['loss']))
                 if not config["gen_patience"] <= 0:
-                    checkpoint.save(sess, os.path.join(checkpoint_dir, 'ckpt-all'))
-
+                    pass
                 if gen_rtns['loss'] < (min_gen_val_loss - config["gen_es_tolerance"]):
                     min_gen_val_loss = gen_rtns['loss']
                     patience = 0
-                    checkpoint.save(sess, os.path.join(checkpoint_dir, 'ckpt-all'))
                 else:
                     patience += 1
                
@@ -1808,11 +1834,10 @@ def main(config = None):
                 disc_pretrain_time = disc_pretrain_time + disc_rtns["total_runtime"]
                 
                 if not config["disc_patience"] <= 0:
-                    checkpoint.save(sess, os.path.join(checkpoint_dir, 'ckpt-all-base'))
+                    pass
                 if disc_rtns['loss'] < (min_disc_val_loss - config["disc_es_tolerance"]):
                     min_disc_val_loss = disc_rtns['loss']
                     patience = 0
-                    checkpoint.save(sess, os.path.join(checkpoint_dir, 'ckpt-all'))
                 else:
                     patience += 1
                
@@ -1832,11 +1857,10 @@ def main(config = None):
                 disc_pretrain_time = disc_pretrain_time + disc_rtns["total_runtime"]
                 
                 if not config["disc_patience"] <= 0:
-                    checkpoint.save(sess, os.path.join(checkpoint_dir, 'ckpt-all-base'))
+                    pass
                 if disc_rtns['loss'] < (min_disc_crit_val_loss - config["disc_es_tolerance"]):
                     min_disc_crit_val_loss = disc_rtns['loss']
                     patience = 0
-                    checkpoint.save(sess, os.path.join(checkpoint_dir, 'ckpt-all'))
                 else:
                     patience += 1
                
@@ -1844,7 +1868,6 @@ def main(config = None):
                     logger.info("\nDisc Early Stopping Reached at val loss {:0.02f}".format(
                         min_disc_crit_val_loss))
                     break
-                checkpoint.save(sess, os.path.join(checkpoint_dir, 'ckpt-all'))
                 
             logger.info("\nTotal runtime after discriminator pretrain: {}".format(total_runtime))
 
@@ -2025,8 +2048,8 @@ if __name__ == "__main__":
         
     # Setup
     if config_file is None:
-#         config_file = "spamGAN_config_smallunsup_opspam.json"
-        config_file = "spamGAN_config_smallunsup_yelp.json"
+        config_file = "spamGAN_config_smallunsup_opspam.json"
+#         config_file = "spamGAN_config_smallunsup_yelp.json"
         print('No config given, using {}'.format(config_file))
         config = json.loads(open(config_file).read())
     else:

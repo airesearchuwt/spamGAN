@@ -5,11 +5,11 @@
 
 	
 	"sample_strategy": "train",
-	"sample_helper": "sample",
+	"sample_helper": "topk_sample",
+	"sample_topk": 16,
+	"sample_temperature": 1.0,
+	"sample_probability": 0.5,
 	"beam_width": 4,
-	"infer_topk":16,
-	"sampling_temperature": 1.0,
-	"sampling_probability": 0.5,
 	
 
 	"restore_model": false,
@@ -38,7 +38,7 @@
 	"batches_per_text_summary": 100,
 
 
-	"g_pretrain_epochs": 8,
+	"g_pretrain_epochs": 10,
 	"d_pretrain_epochs": 4,
 	"d_pretrain_critic_epochs": 0,
 	"c_pretrain_epochs": 4,
@@ -155,9 +155,9 @@
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<BOS>",
+				"bos_token": "<|startoftext|>",
 				"delimiter": " ",
-				"eos_token": "<EOS>",
+				"eos_token": "<|endoftext|>",
 				"data_name": "x",
 				"pad_to_max_seq_length": true
 			},
@@ -189,9 +189,9 @@
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<BOS>",
+				"bos_token": "<|startoftext|>",
 				"delimiter": " ",
-				"eos_token": "<EOS>",
+				"eos_token": "<|endoftext|>",
 				"data_name": "x",
 				"pad_to_max_seq_length": true
 			},
@@ -221,9 +221,9 @@
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<BOS>",
+				"bos_token": "<|startoftext|>",
 				"delimiter": " ",
-				"eos_token": "<EOS>",
+				"eos_token": "<|endoftext|>",
 				"data_name": "x",
 				"pad_to_max_seq_length": true
 			},
@@ -527,8 +527,8 @@
 		"optimizer": {
 			"type": "tensorflow.contrib.opt.AdamWOptimizer",
 			"kwargs": {
-				"weight_decay": 1e-7,
-				"learning_rate": 2e-7
+				"weight_decay": 1e-5,
+				"learning_rate": 6.25e-5
 			}
 		},
 		"learning_rate_decay": {

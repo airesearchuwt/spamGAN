@@ -5,11 +5,11 @@
 
 	
 	"sample_strategy": "train",
-	"sample_helper": "sample",
+	"sample_helper": "topk_sample",
+	"sample_topk": 16,
+	"sample_temperature": 1.0,
+	"sample_probability": 0.5,
 	"beam_width": 4,
-	"infer_topk":16,
-	"sampling_temperature": 1.0,
-	"sampling_probability": 0.5,
 	
 
 	"restore_model": false,
