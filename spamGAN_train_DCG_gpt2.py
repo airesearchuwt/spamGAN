@@ -559,7 +559,7 @@ def main(config = None):
                 real_inp = tf.concat([real_inp[:, :, :-1], r_progress_vector], axis = -1)
                 fake_inp = tf.concat([fake_inp[:, :, :-1], f_progress_vector], axis = -1)
                 
-            if config["disc_hparams"]["use_transformer_encoder"] is False:
+            if config["disc_hparams"]["gpt2_stack"]["use_transformer_encoder"] is False:
                 r_disc_outputs = discriminator(
                     decoding_strategy='train_greedy',
                     inputs=real_inp,
@@ -727,7 +727,7 @@ def main(config = None):
             label_seq_lengths = tf.clip_by_value(label_seq_lengths, 0, max_length)
 
 
-            if config["clas_hparams"]["use_transformer_encoder"] is False:
+            if config["clas_hparams"]["gpt2_stack"]["use_transformer_encoder"] is False:
                 r_clas_outputs = classifier(
                     decoding_strategy='train_greedy',
                     inputs=real_label_inp_emb,
