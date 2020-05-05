@@ -38,8 +38,8 @@
 
 
 	"g_pretrain_epochs": 10,
-	"d_pretrain_epochs": 4,
-	"d_pretrain_critic_epochs": 0,
+	"d_pretrain_epochs": 1,
+	"d_pretrain_critic_epochs": 1,
 	"c_pretrain_epochs": 4,
 	"adversarial_epochs": 5,
 
@@ -72,11 +72,11 @@
 	"linear_decay_pg_weights": true,
 
 	"prior_prob": 0.5,
-	"noise_size": 120,
-	"class_size": 8,
+	"noise_size": 128,
+	"class_size": 16,
 
-	"disc_traitor_rate": 0.5,
-	"disc_label_smoothing_epsilon": 0.2,
+	"disc_traitor_prob": 0.5,
+	"disc_label_smoothing_epsilon": 0.5,
 
 	"adv_max_clip": 100,
 	"min_log_prob": 0.1,
@@ -526,8 +526,8 @@
 		"optimizer": {
 			"type": "tensorflow.contrib.opt.AdamWOptimizer",
 			"kwargs": {
-				"weight_decay": 1e-5,
-				"learning_rate": 6.25e-5 
+				"weight_decay": 1e-6,
+				"learning_rate": 6.25e-6
 			}
 		},
 		"learning_rate_decay": {
