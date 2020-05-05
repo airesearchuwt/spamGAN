@@ -411,6 +411,24 @@ def _top_k_logits(logits, k):
         lambda: logits,
         lambda: _top_k(),
     )
+    
+
+def _top_p_logits(logits, p):
+    """Nucleus sampling"""
+    batch, _ = logits.shape.as_list()
+    sorted_logits = tf.sort(logits, direction='DESCENDING', axis=-1)
+    cumulative_probs = tf.cumsum(tf.nn.softmax(sorted_logits, axis=-1), axis=-1)
+    indices = tf.stack([
+        tf.range(0, batch),
+        # number of indices to include
+        tf.maximum(tf.reduce_sum(tf.cast(cumulative_probs <= p, tf.int32), axis=-1) - 1, 0),
+    ], axis=-1)
+    min_values = tf.gather_nd(sorted_logits, indices)
+    return tf.where(
+        logits < min_values,
+        tf.ones_like(logits) * -1e10,
+        logits,
+    )
 
 
 class GPT2ContextTopKSampleEmbeddingHelper(GPT2ContextGreedyEmbeddingHelper):

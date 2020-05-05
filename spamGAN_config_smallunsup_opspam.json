@@ -5,8 +5,9 @@
 
 	
 	"sample_strategy": "train",
-	"sample_helper": "topk_output_sample",
-	"sample_topk": 256,
+	"sample_helper": "top_p_output_sample",
+	"sample_top_k": 8,
+	"sample_top_p": 0.9,
 	"sample_temperature": 1.0,
 	"sample_probability": 0.5,
 	"beam_width": 4,
@@ -75,7 +76,7 @@
 	"class_size": 8,
 
 
-	"disc_label_smoothing_epsilon": 0.2,
+	"disc_label_smoothing_epsilon": 0.5,
 
 	"adv_max_clip": 100,
 	"min_log_prob": 0.1,
@@ -321,26 +322,26 @@
 			"embedding_size": 768,
 			"embed": {
 				"dim": 768,
-				"dropout_rate": 0.4,
+				"dropout_rate": 0.5,
 				"name": "word_embeddings"
 			},
 			"position_size": 1024,
 			"position_embed": {
 				"dim": 768,
-				"dropout_rate": 0.4,
+				"dropout_rate": 0.5,
 				"name": "position_embeddings"
 			},
 
 			"transformer": {
 				"dim": 768,
 				"num_blocks": 12,
-				"embedding_dropout": 0.1,
-				"residual_dropout": 0.1,
+				"embedding_dropout": 0.5,
+				"residual_dropout": 0.5,
 				"multihead_attention": {
 					"use_bias": true,
 					"num_units": 768,
 					"num_heads": 12,
-					"dropout_rate": 0.1,
+					"dropout_rate": 0.5,
 					"output_dim": 768
 				},
 				"initializer": {
@@ -377,7 +378,7 @@
 			"output_layer": {
 				"units": 1,
 				"activation": "linear",
-				"dropout_rate": 0.4,
+				"dropout_rate": 0.5,
 				"name": "gpt2_stack_output"
 			},
 			"name": "discriminator"

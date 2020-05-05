@@ -360,7 +360,8 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                helper=None,
                mode=None,
                sample_context=None,
-               top_k=0
+               top_k=0,
+               top_p=1.0
                ):
         """Performs decoding.
 
@@ -542,6 +543,7 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         self.mode = mode
         self.softmax_temperature = softmax_temperature
         self.top_k = top_k
+        self.top_p = top_p
         
         # Record sample context, which will be used in "infer_sample" and "beam_search"
         if sample_context is not None:
@@ -552,7 +554,8 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         if helper is None and beam_width is None and \
                 (decoding_strategy == "train_greedy" or \
                  decoding_strategy == "train_sample" or \
-                 decoding_strategy == "train_topk_output_sample"):  # Teacher-forcing
+                 decoding_strategy == "train_top_k_output_sample" or \
+                 decoding_strategy == "train_top_p_output_sample"):  # Teacher-forcing
             decoder_self_attention_bias = (
                 attn.attention_bias_lower_triangle(
                     shape_list(inputs)[1]))
@@ -571,15 +574,13 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             if self._encode_mode is False:
                 if decoding_strategy == "train_greedy":
                     sample_ids = tf.cast(tf.argmax(logits, axis=-1), tf.int32)
-                elif "train_sample": # Train-sample decoding
+                else: 
                     if self.softmax_temperature is not None:
                         logits = logits / self.softmax_temperature
-                    sample_id_sampler = tfpd.Categorical(logits=logits)
-                    sample_ids = sample_id_sampler.sample(seed=None)
-                elif "train_topk_output_sample": # Train top-k sample decoding
-                    if self.softmax_temperature is not None:
-                        logits = logits / self.softmax_temperature
-                    logits = custom_helpers._top_k_logits(logits, k=self.top_k)
+                    if "train_top_k_output_sample": # Train top-k sample decoding
+                        logits = custom_helpers._top_k_logits(logits, k=self.top_k)
+                    elif "train_top_p_output_sample": # Train top-p sample decoding
+                        logits = custom_helpers._top_p_logits(logits, p=self.top_p)
                     sample_id_sampler = tfpd.Categorical(logits=logits)
                     sample_ids = sample_id_sampler.sample(seed=None)
                 

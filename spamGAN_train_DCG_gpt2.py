@@ -300,15 +300,15 @@ def main(config = None):
                         end_token=end_token, 
                         softmax_temperature=softmax_temperature
                         )
-                elif sample_helper == "topk_sample":
-                    topk = config["sample_topk"]
+                elif sample_helper == "top_k_sample":
+                    top_k = config["sample_top_k"]
                     gpt2_context_helper = custom_helpers.GPT2ContextTopKSampleEmbeddingHelper(
                         embedding=gen_embedder, 
                         mode=generator_dropout, 
                         context=random_vector, 
                         start_tokens=start_tokens, 
                         end_token=end_token, 
-                        top_k=topk,
+                        top_k=top_k,
                         softmax_temperature=softmax_temperature 
                         )
                 elif sample_helper == "softmax":
@@ -348,8 +348,8 @@ def main(config = None):
                 tiled_random_vector = tf.reshape(
                     tf.tile(random_vector, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size+class_size])
                 
-                if sample_helper == "topk_sample":
-                    top_k = config["sample_topk"]
+                if sample_helper == "top_k_sample":
+                    top_k = config["sample_top_k"]
                     gen_inputs_time = tf.expand_dims(tf.range(tf.shape(gen_inputs)[1] ), 0)
                     gen_inputs_time = tf.broadcast_to(gen_inputs_time, [tf.shape(gen_inputs)[0], tf.shape(gen_inputs)[1] ])
                     gen_inputs_emb = gen_embedder(gen_inputs, gen_inputs_time, generator_dropout)
@@ -371,8 +371,8 @@ def main(config = None):
                         )
                     gen_logits = gen_outputs.logits
                     gen_sample_ids = gen_outputs.sample_id
-                elif sample_helper == "topk_output_sample":
-                    top_k = config["sample_topk"]
+                elif sample_helper == "top_k_output_sample":
+                    top_k = config["sample_top_k"]
                     gen_inputs = inp
                     gen_inputs_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(gen_inputs)[1]) # Trim non-ending sentences. 
                     tiled_random_vector = tf.reshape(
@@ -385,6 +385,24 @@ def main(config = None):
                         mode=generator_dropout,
                         mle_context=tiled_random_vector,
                         top_k=top_k
+                        )
+                    gen_logits = gen_outputs.logits
+                    gen_sample_ids = gen_outputs.sample_id
+                    gen_lengths = get_gen_lengths(gen_sample_ids)
+                elif sample_helper == "top_p_output_sample":
+                    top_p = config["sample_top_p"]
+                    gen_inputs = inp
+                    gen_inputs_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(gen_inputs)[1]) # Trim non-ending sentences. 
+                    tiled_random_vector = tf.reshape(
+                        tf.tile(random_vector, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size+class_size])
+                    
+                    gen_outputs = generator(
+                        decoding_strategy="train_top_p_output_sample",
+                        inputs=gen_inputs,
+                        softmax_temperature=softmax_temperature,
+                        mode=generator_dropout,
+                        mle_context=tiled_random_vector,
+                        top_p=top_p
                         )
                     gen_logits = gen_outputs.logits
                     gen_sample_ids = gen_outputs.sample_id
@@ -1931,7 +1949,7 @@ def main(config = None):
                         gen_rtns = gen_run_epoch(sess, 'val', sum_writer)
                         total_runtime = total_runtime + gen_rtns["total_runtime"]
                         gen_adv_time = gen_adv_time + gen_rtns["total_runtime"]
-                        logger.info('Gen Val loss:{}'.format(gen_rtns['loss']))
+                        logger.info('\nGen Val loss:{}'.format(gen_rtns['loss']))
                 logger.info("\nTotal runtime after generator mle-train: {}".format(total_runtime))
                 
                 # Check discriminator loss
@@ -1948,7 +1966,7 @@ def main(config = None):
                     disc_rtns = disc_run_epoch(sess, 'train', sum_writer, disc_rtns['step'])
                     total_runtime = total_runtime + disc_rtns["total_runtime"]
                     disc_adv_time = disc_adv_time + disc_rtns["total_runtime"]
-                    logger.info('Disc Adv-Valid Epoch {}+{}'.format(cur_epoch, disc_e))
+                    logger.info('\nDisc Adv-Valid Epoch {}+{}'.format(cur_epoch, disc_e))
                     disc_rtns = disc_run_epoch(sess, 'val', sum_writer, disc_rtns['step'])
                     total_runtime = total_runtime + disc_rtns["total_runtime"]
                     disc_adv_time = disc_adv_time + disc_rtns["total_runtime"]
