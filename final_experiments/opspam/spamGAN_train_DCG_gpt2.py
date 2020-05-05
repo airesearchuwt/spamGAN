@@ -649,7 +649,7 @@ def main(config = None):
             r_disc_loss = tf.losses.sigmoid_cross_entropy(
                 logits = r_disc_score,
                 multi_class_labels=true_labs, 
-                label_smoothing=config["disc_label_smoothing_epsilon"],
+                label_smoothing=config["disc_label_smoothing_epsilon"], # One-side label smoothing
                 reduction=tf.losses.Reduction.MEAN)
             f_disc_loss = tf.losses.sigmoid_cross_entropy(
                 logits=f_disc_score,
@@ -2079,8 +2079,8 @@ if __name__ == "__main__":
         
     # Setup
     if config_file is None:
-        config_file = "spamGAN_config_smallunsup_opspam.json"
-#         config_file = "spamGAN_config_smallunsup_yelp.json"
+#         config_file = "spamGAN_config_smallunsup_opspam.json"
+        config_file = "spamGAN_config_smallunsup_yelp.json"
         print('No config given, using {}'.format(config_file))
         config = json.loads(open(config_file).read())
     else:
