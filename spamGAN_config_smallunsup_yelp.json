@@ -75,8 +75,8 @@
 	"noise_size": 120,
 	"class_size": 8,
 
-
-	"disc_label_smoothing_epsilon": 0.05,
+	"disc_traitor_rate": 0.5,
+	"disc_label_smoothing_epsilon": 0.2,
 
 	"adv_max_clip": 100,
 	"min_log_prob": 0.1,

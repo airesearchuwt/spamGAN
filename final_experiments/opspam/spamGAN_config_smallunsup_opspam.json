@@ -75,8 +75,8 @@
 	"noise_size": 120,
 	"class_size": 8,
 
-
-	"disc_label_smoothing_epsilon": 0.5,
+	"disc_traitor_rate": 0.5,
+	"disc_label_smoothing_epsilon": 0.2,
 
 	"adv_max_clip": 100,
 	"min_log_prob": 0.1,
@@ -335,13 +335,13 @@
 			"transformer": {
 				"dim": 768,
 				"num_blocks": 12,
-				"embedding_dropout": 0.5,
-				"residual_dropout": 0.5,
+				"embedding_dropout": 0.1,
+				"residual_dropout": 0.1,
 				"multihead_attention": {
 					"use_bias": true,
 					"num_units": 768,
 					"num_heads": 12,
-					"dropout_rate": 0.5,
+					"dropout_rate": 0.1,
 					"output_dim": 768
 				},
 				"initializer": {
@@ -526,8 +526,8 @@
 		"optimizer": {
 			"type": "tensorflow.contrib.opt.AdamWOptimizer",
 			"kwargs": {
-				"weight_decay": 1e-7,
-				"learning_rate": 1.25e-7 
+				"weight_decay": 1e-5,
+				"learning_rate": 6.25e-5 
 			}
 		},
 		"learning_rate_decay": {

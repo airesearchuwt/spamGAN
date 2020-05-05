@@ -616,6 +616,17 @@ def main(config = None):
             
             r_disc_q_logit_sq = tf.squeeze(r_disc_q_logit)
             f_disc_q_logit_sq = tf.squeeze(f_disc_q_logit)
+            
+            traitor_size = tf.cast(
+                tf.cast(batch_size, tf.float32)*config["disc_traitor_rate"], tf.int32)
+            r_disc_traitor = r_disc_q_logit_sq[traitor_size:, :]
+            f_disc_traitor = f_disc_q_logit_sq[traitor_size:, :]
+            r_disc_loyalty = r_disc_q_logit_sq[:-traitor_size, :]
+            f_disc_loyalty = f_disc_q_logit_sq[:-traitor_size, :]
+            
+            r_disc_q_logit_sq = tf.concat([r_disc_loyalty, f_disc_traitor], axis=0)
+            f_disc_q_logit_sq = tf.concat([f_disc_loyalty, r_disc_traitor], axis=0)
+            
             r_disc_score = tx.losses.mask_and_reduce(r_disc_q_logit_sq,
                                               real_seq_lengths,
                                               average_across_batch=False,
@@ -2117,7 +2128,7 @@ if __name__ == "__main__":
             f.close()
             
         else:
-            dict_all_res, dict_bestclas_pretrain_res, dict_bestclas_acc_res, dict_bestclas_f1_res, dict_bestclas_mixed_res = main(config)
+            dict_all_res, dict_bestclas_acc_res, dict_bestclas_mixed_res = main(config)
 
             all_file_exists = os.path.isfile(data_paths["all_result_file"])
             f = open(data_paths["all_result_file"],'a')
