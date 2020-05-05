@@ -168,8 +168,8 @@ def main(config = None):
         logger.info("Creating Generator MLE training subgraph...")
         # Pre-train Generator subgraph
         with g.name_scope('gen_mle'):
-            x = inp[:, 0:(tf.shape(inp)[1]-2)]
-            y = inp[:, 1:(tf.shape(inp)[1]-1)]
+            x = inp[:, :-1]
+            y = inp[:, 1:]
             y_onehot = tf.one_hot(y, vocab_size)
             
             x_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(x)[1]) # Trim non-ending sentences. 
@@ -249,6 +249,7 @@ def main(config = None):
             else:
                 max_length = tf.Variable(config["max_decoding_length_infer"], dtype=tf.int32)
             logger.info("Creating token sequence sampling subgraph...")
+            
             start_tokens = tf.cast(tf.fill([batch_size], 
                                    vocab.bos_token_id),
                                    dtype=tf.int32)
@@ -342,7 +343,7 @@ def main(config = None):
                 
             elif sample_strategy == "train":
                 softmax_temperature = config["sample_temperature"]
-                gen_inputs = inp[:, 1:tf.shape(inp)[1]-1]
+                gen_inputs = inp
                 gen_inputs_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(gen_inputs)[1]) # Trim non-ending sentences. 
                 tiled_random_vector = tf.reshape(
                     tf.tile(random_vector, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size+class_size])
@@ -372,7 +373,7 @@ def main(config = None):
                     gen_sample_ids = gen_outputs.sample_id
                 elif sample_helper == "topk_output_sample":
                     top_k = config["sample_topk"]
-                    gen_inputs = inp[:, 1:tf.shape(inp)[1]-1]
+                    gen_inputs = inp
                     gen_inputs_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(gen_inputs)[1]) # Trim non-ending sentences. 
                     tiled_random_vector = tf.reshape(
                         tf.tile(random_vector, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size+class_size])
@@ -389,7 +390,7 @@ def main(config = None):
                     gen_sample_ids = gen_outputs.sample_id
                     gen_lengths = get_gen_lengths(gen_sample_ids)
                 else:
-                    gen_inputs = inp[:, 1:tf.shape(inp)[1]-1]
+                    gen_inputs = inp
                     gen_inputs_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(gen_inputs)[1]) # Trim non-ending sentences. 
                     tiled_random_vector = tf.reshape(
                         tf.tile(random_vector, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size+class_size])
@@ -406,7 +407,7 @@ def main(config = None):
                     gen_lengths = get_gen_lengths(gen_sample_ids)
                     
             elif sample_strategy == "scheduled":
-                gen_inputs = inp[:, 1:tf.shape(inp)[1]-1]
+                gen_inputs = inp
                 gen_inputs_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(gen_inputs)[1]) # Trim non-ending sentences. 
                 tiled_random_vector = tf.reshape(
                     tf.tile(random_vector, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size+class_size])
@@ -502,7 +503,7 @@ def main(config = None):
         with g.name_scope("disc_train"):
             logger.info("Creating discriminator training subgraph...")
             fake_seq = gen_sample_ids
-            real_seq = inp[:, 1:-1] # remove BOS EOS token as fake does not have.
+            real_seq = inp
             real_seq_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(real_seq)[1])
             
             r_disc_pos_init_time = tf.expand_dims(tf.range(tf.shape(real_seq)[1]), 0)
@@ -558,7 +559,7 @@ def main(config = None):
                 real_inp = tf.concat([real_inp[:, :, :-1], r_progress_vector], axis = -1)
                 fake_inp = tf.concat([fake_inp[:, :, :-1], f_progress_vector], axis = -1)
                 
-            if "decoder" in config["disc_hparams"]["gpt2_stack"].keys():
+            if config["disc_hparams"]["use_transformer_encoder"] is False:
                 r_disc_outputs = discriminator(
                     decoding_strategy='train_greedy',
                     inputs=real_inp,
@@ -619,12 +620,12 @@ def main(config = None):
             r_disc_loss = tf.losses.sigmoid_cross_entropy(
                 logits = r_disc_score,
                 multi_class_labels=true_labs, 
-                label_smoothing = config["disc_label_smoothing_epsilon"],
+                label_smoothing=config["disc_label_smoothing_epsilon"],
                 reduction=tf.losses.Reduction.MEAN)
             f_disc_loss = tf.losses.sigmoid_cross_entropy(
                 logits=f_disc_score,
                 multi_class_labels=fake_labs, 
-                label_smoothing = config["disc_label_smoothing_epsilon"],
+                label_smoothing=0,
                 reduction=tf.losses.Reduction.MEAN)
             disc_loss = r_disc_loss + f_disc_loss
             disc_loss.set_shape(disc_loss.shape)
@@ -710,7 +711,7 @@ def main(config = None):
             logger.info("Creating classifier training subgraph...")
 
             # Designate clas input
-            real_label_inp = label_inp[:, 1:-1]
+            real_label_inp = label_inp
             
             r_clas_pos_init_time = tf.expand_dims(tf.range(tf.shape(real_label_inp)[1]), 0)
             r_clas_pos_init_time = tf.broadcast_to(
@@ -726,7 +727,7 @@ def main(config = None):
             label_seq_lengths = tf.clip_by_value(label_seq_lengths, 0, max_length)
 
 
-            if "decoder" in config["clas_hparams"]["gpt2_stack"].keys():
+            if config["clas_hparams"]["use_transformer_encoder"] is False:
                 r_clas_outputs = classifier(
                     decoding_strategy='train_greedy',
                     inputs=real_label_inp_emb,

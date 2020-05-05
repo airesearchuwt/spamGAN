@@ -6,7 +6,7 @@
 	
 	"sample_strategy": "train",
 	"sample_helper": "topk_output_sample",
-	"sample_topk": 40,
+	"sample_topk": 256,
 	"sample_temperature": 1.0,
 	"sample_probability": 0.5,
 	"beam_width": 4,
@@ -75,7 +75,7 @@
 	"class_size": 8,
 
 
-	"disc_label_smoothing_epsilon": 0.05,
+	"disc_label_smoothing_epsilon": 0.2,
 
 	"adv_max_clip": 100,
 	"min_log_prob": 0.1,
@@ -84,7 +84,7 @@
 	"max_pg_loss": 200,
 
 
-	"add_sentence_progress": true,
+	"add_sentence_progress": false,
 
 	"clas_loss_on_fake_lambda": 1.0,
 	"disc_crit_train_on_fake_only": true,
@@ -120,9 +120,9 @@
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<|startoftext|>",
+				"bos_token": "",
 				"delimiter": " ",
-				"eos_token": "<|endoftext|>",
+				"eos_token": "",
 				"data_name": "x",
 				"pad_to_max_seq_length": true
 			},
@@ -153,9 +153,9 @@
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<|startoftext|>",
+				"bos_token": "",
 				"delimiter": " ",
-				"eos_token": "<|endoftext|>",
+				"eos_token": "",
 				"data_name": "x",
 				"pad_to_max_seq_length": true
 			},
@@ -187,9 +187,9 @@
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<|startoftext|>",
+				"bos_token": "",
 				"delimiter": " ",
-				"eos_token": "<|endoftext|>",
+				"eos_token": "",
 				"data_name": "x",
 				"pad_to_max_seq_length": true
 			},
@@ -219,9 +219,9 @@
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<|startoftext|>",
+				"bos_token": "",
 				"delimiter": " ",
-				"eos_token": "<|endoftext|>",
+				"eos_token": "",
 				"data_name": "x",
 				"pad_to_max_seq_length": true
 			},
@@ -525,8 +525,8 @@
 		"optimizer": {
 			"type": "tensorflow.contrib.opt.AdamWOptimizer",
 			"kwargs": {
-				"weight_decay": 1e-5,
-				"learning_rate": 6.25e-5
+				"weight_decay": 1e-7,
+				"learning_rate": 6.25e-7 
 			}
 		},
 		"learning_rate_decay": {

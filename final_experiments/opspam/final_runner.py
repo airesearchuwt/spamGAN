@@ -111,7 +111,7 @@ def make_data(trp, usp, run):
 # 0.5, 0.8 x 0.5, 0.8
 for train_pcent in [0.1, 0.3, 0.5, 0.7, 0.9, 1.0]:
     for unsup_pcent in [0.0, 0.5, 0.7, 1.0]:
-        for run in range(10):
+        for run in range(5):
             base_config_file = "spamGAN_config_smallunsup_opspam.json"
             base_config = json.loads(open(base_config_file).read())
             data_paths = make_data(train_pcent, unsup_pcent, run)

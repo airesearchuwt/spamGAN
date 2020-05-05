@@ -605,8 +605,7 @@ def beam_search(symbols_to_logits_fn,
             finished_scores.get_shape(),
             finished_flags.get_shape(),
             nest.map_structure(get_state_shape_invariants, states),
-#             tf.TensorShape([None, None, beam_size, None])
-            tf.TensorShape([None, None, None]), # Degrade to infer_greedy
+            tf.TensorShape([None, None, None]) if beam_size == 1 else tf.TensorShape([None, None, beam_size, None]),
         ],
         parallel_iterations=1,
 #         back_prop=False)

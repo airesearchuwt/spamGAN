@@ -130,30 +130,26 @@ class Vocab(object):
         warnings.simplefilter("ignore", UnicodeWarning)
 
         if self._bos_token in vocab:
-#             raise ValueError("Special begin-of-seq token already exists in the "
-#                              "vocabulary: '%s'" % self._bos_token)
-            pass
+            raise ValueError("Special begin-of-seq token already exists in the "
+                             "vocabulary: '%s'" % self._bos_token)
         if self._eos_token in vocab:
-#             raise ValueError("Special end-of-seq token already exists in the "
-#                              "vocabulary: '%s'" % self._eos_token)
-            pass
+            raise ValueError("Special end-of-seq token already exists in the "
+                             "vocabulary: '%s'" % self._eos_token)
         if self._unk_token in vocab:
-#             raise ValueError("Special UNK token already exists in the "
-#                              "vocabulary: '%s'" % self._unk_token)
-            pass
+            raise ValueError("Special UNK token already exists in the "
+                             "vocabulary: '%s'" % self._unk_token)
         if self._pad_token in vocab:
-#             raise ValueError("Special padding token already exists in the "
-#                              "vocabulary: '%s'" % self._pad_token)
-            pass
+            raise ValueError("Special padding token already exists in the "
+                             "vocabulary: '%s'" % self._pad_token)
 
         warnings.simplefilter("default", UnicodeWarning)
 
         # Places _pad_token at the beginning to make sure it take index 0.
-        vocab = [self._pad_token, self._bos_token, self._unk_token] + vocab[3:-1] + [self._eos_token]
+        vocab = [self._pad_token] + vocab[1:-3] + [self._bos_token, self._unk_token, self._eos_token]
         # Must make sure this is consistent with the above line
-        unk_token_idx = 3
         vocab_size = len(vocab)
         vocab_idx = np.arange(vocab_size)
+        unk_token_idx = vocab_size - 2
 
         # Creates TF maps
         id_to_token_map = tf.contrib.lookup.HashTable(
