@@ -161,9 +161,9 @@ class TransformerEncoder(EncoderBase):
                 activation=self._hparams["output_layer"]["activation"],
                 name=self._hparams["output_layer"]["name"]
                 )
-            self._dropout_layer = tf.layers.Dropout(
-                rate=self._hparams["output_layer"]["dropout_rate"],
-                name="{}_{}".format(self._hparams["output_layer"]["name"], "dropout"))
+            self._dropout_layer = tf.keras.layers.Dropout(
+                    rate=self._hparams["output_layer"]["dropout_rate"],
+                    )
 
             self.multihead_attention_list = []
             self.poswise_networks = []

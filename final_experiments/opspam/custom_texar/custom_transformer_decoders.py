@@ -28,6 +28,7 @@ import collections
 
 import tensorflow as tf
 from tensorflow.contrib.seq2seq import Decoder as TFDecoder
+from tensorflow_probability import distributions as tfpd
 
 from texar.tf.core import layers
 from texar.tf.module_base import ModuleBase
@@ -49,6 +50,7 @@ from texar.tf.modules.decoders.dynamic_decode import dynamic_decode
 
 __all__ = [
     "TransformerDecoderOutput",
+    "TransformerDecoderEncodeOutput",
     "TransformerDecoder"
 ]
 
@@ -124,9 +126,9 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                 self._output_layer, self._vocab_size = _make_output_layer(
                     output_layer, vocab_size, self._hparams.output_layer_bias,
                     self.variable_scope)
-                self._dropout_layer = tf.layers.Dropout(
+                self._dropout_layer = tf.keras.layers.Dropout(
                     rate=self._hparams["output_layer"]["dropout_rate"],
-                    name="{}_{}".format(self._hparams["output_layer"]["name"], "dropout"))
+                    )
             else:
                 self._vocab_size = vocab_size
                 self._output_layer = tf.layers.Dense(
@@ -134,9 +136,9 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                     activation=self._hparams["output_layer"]["activation"],
                     name=self._hparams["output_layer"]["name"]
                     )
-                self._dropout_layer = tf.layers.Dropout(
+                self._dropout_layer = tf.keras.layers.Dropout(
                     rate=self._hparams["output_layer"]["dropout_rate"],
-                    name="{}_{}".format(self._hparams["output_layer"]["name"], "dropout"))
+                    )
                 
             # Make attention and poswise networks
             self.multihead_attentions = {
@@ -357,7 +359,9 @@ class TransformerDecoder(ModuleBase, TFDecoder):
                embedding=None,
                helper=None,
                mode=None,
-               sample_context=None
+               sample_context=None,
+               top_k=0,
+               top_p=1.0
                ):
         """Performs decoding.
 
@@ -538,6 +542,8 @@ class TransformerDecoder(ModuleBase, TFDecoder):
         self.embedding = embedding
         self.mode = mode
         self.softmax_temperature = softmax_temperature
+        self.top_k = top_k
+        self.top_p = top_p
         
         # Record sample context, which will be used in "infer_sample" and "beam_search"
         if sample_context is not None:
@@ -547,7 +553,9 @@ class TransformerDecoder(ModuleBase, TFDecoder):
 
         if helper is None and beam_width is None and \
                 (decoding_strategy == "train_greedy" or \
-                 decoding_strategy == "train_sample"):  # Teacher-forcing
+                 decoding_strategy == "train_sample" or \
+                 decoding_strategy == "train_top_k_output_sample" or \
+                 decoding_strategy == "train_top_p_output_sample"):  # Teacher-forcing
             decoder_self_attention_bias = (
                 attn.attention_bias_lower_triangle(
                     shape_list(inputs)[1]))
@@ -565,16 +573,20 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             
             if self._encode_mode is False:
                 if decoding_strategy == "train_greedy":
-                    preds = tf.cast(tf.argmax(logits, axis=-1), tf.int32)
-                else: # Train-sample decoding
+                    sample_ids = tf.cast(tf.argmax(logits, axis=-1), tf.int32)
+                else: 
                     if self.softmax_temperature is not None:
                         logits = logits / self.softmax_temperature
-                    sample_id_sampler = tf.distributions.Categorical(logits=logits)
-                    preds = sample_id_sampler.sample(seed=None)
+                    if "train_top_k_output_sample": # Train top-k sample decoding
+                        logits = custom_helpers._top_k_logits(logits, k=self.top_k)
+                    elif "train_top_p_output_sample": # Train top-p sample decoding
+                        logits = custom_helpers._top_p_logits(logits, p=self.top_p)
+                    sample_id_sampler = tfpd.Categorical(logits=logits)
+                    sample_ids = sample_id_sampler.sample(seed=None)
                 
                 rets = TransformerDecoderOutput(
                         logits=logits,
-                        sample_id=preds
+                        sample_id=sample_ids
                     )
             else:
                 rets = TransformerDecoderEncodeOutput(
@@ -585,10 +597,12 @@ class TransformerDecoder(ModuleBase, TFDecoder):
             if max_decoding_length is None:
                 max_decoding_length = self._hparams.max_decoding_length
             self.max_decoding_length = max_decoding_length
-            if beam_width is None and decoding_strategy == "infer":  # Inference-like decoding
+            if beam_width is None and (decoding_strategy == "infer" or \
+                                       decoding_strategy == "scheduled" or \
+                                       decoding_strategy == "train_topk_sample"):  # Inference-like decoding
                 # Check helper
                 if helper is None:
-                    raise ValueError("Helper required for inference-like decoding")
+                    raise ValueError(f"Helper required for inference-like decoding")
                 
                 self._helper = helper
                 self._cache = self._init_cache(memory, memory_attention_bias,

@@ -168,8 +168,9 @@ def main(config = None):
         logger.info("Creating Generator MLE training subgraph...")
         # Pre-train Generator subgraph
         with g.name_scope('gen_mle'):
-            x = inp[:, 0:(tf.shape(inp)[1]-2)]
-            y = inp[:, 1:(tf.shape(inp)[1]-1)]
+            start_tokens = tf.cast(tf.fill([batch_size, 1], vocab.bos_token_id), dtype=tf.int64)
+            x = tf.concat([start_tokens, inp[:, :-1]], axis=-1)
+            y = inp 
             y_onehot = tf.one_hot(y, vocab_size)
             
             x_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(x)[1]) # Trim non-ending sentences. 
@@ -183,7 +184,6 @@ def main(config = None):
             context = tf.concat([context, tiled_true_classes], axis=1)
             tiled_context = tf.reshape(
                 tf.tile(context, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size + class_size])
-
             
             outputs_mle = generator(
                 decoding_strategy='train_greedy',
@@ -249,6 +249,7 @@ def main(config = None):
             else:
                 max_length = tf.Variable(config["max_decoding_length_infer"], dtype=tf.int32)
             logger.info("Creating token sequence sampling subgraph...")
+            
             start_tokens = tf.cast(tf.fill([batch_size], 
                                    vocab.bos_token_id),
                                    dtype=tf.int32)
@@ -299,15 +300,15 @@ def main(config = None):
                         end_token=end_token, 
                         softmax_temperature=softmax_temperature
                         )
-                elif sample_helper == "topk_sample":
-                    topk = config["sample_topk"]
+                elif sample_helper == "top_k_sample":
+                    top_k = config["sample_top_k"]
                     gpt2_context_helper = custom_helpers.GPT2ContextTopKSampleEmbeddingHelper(
                         embedding=gen_embedder, 
                         mode=generator_dropout, 
                         context=random_vector, 
                         start_tokens=start_tokens, 
                         end_token=end_token, 
-                        top_k=topk,
+                        top_k=top_k,
                         softmax_temperature=softmax_temperature 
                         )
                 elif sample_helper == "softmax":
@@ -342,13 +343,13 @@ def main(config = None):
                 
             elif sample_strategy == "train":
                 softmax_temperature = config["sample_temperature"]
-                gen_inputs = inp[:, 1:tf.shape(inp)[1]-1]
+                gen_inputs = inp
                 gen_inputs_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(gen_inputs)[1]) # Trim non-ending sentences. 
                 tiled_random_vector = tf.reshape(
                     tf.tile(random_vector, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size+class_size])
                 
-                if sample_helper == "topk_sample":
-                    top_k = config["sample_topk"]
+                if sample_helper == "top_k_sample":
+                    top_k = config["sample_top_k"]
                     gen_inputs_time = tf.expand_dims(tf.range(tf.shape(gen_inputs)[1] ), 0)
                     gen_inputs_time = tf.broadcast_to(gen_inputs_time, [tf.shape(gen_inputs)[0], tf.shape(gen_inputs)[1] ])
                     gen_inputs_emb = gen_embedder(gen_inputs, gen_inputs_time, generator_dropout)
@@ -370,8 +371,44 @@ def main(config = None):
                         )
                     gen_logits = gen_outputs.logits
                     gen_sample_ids = gen_outputs.sample_id
+                elif sample_helper == "top_k_output_sample":
+                    top_k = config["sample_top_k"]
+                    gen_inputs = inp
+                    gen_inputs_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(gen_inputs)[1]) # Trim non-ending sentences. 
+                    tiled_random_vector = tf.reshape(
+                        tf.tile(random_vector, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size+class_size])
+                    
+                    gen_outputs = generator(
+                        decoding_strategy="train_topk_output_sample",
+                        inputs=gen_inputs,
+                        softmax_temperature=softmax_temperature,
+                        mode=generator_dropout,
+                        mle_context=tiled_random_vector,
+                        top_k=top_k
+                        )
+                    gen_logits = gen_outputs.logits
+                    gen_sample_ids = gen_outputs.sample_id
+                    gen_lengths = get_gen_lengths(gen_sample_ids)
+                elif sample_helper == "top_p_output_sample":
+                    top_p = config["sample_top_p"]
+                    gen_inputs = inp
+                    gen_inputs_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(gen_inputs)[1]) # Trim non-ending sentences. 
+                    tiled_random_vector = tf.reshape(
+                        tf.tile(random_vector, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size+class_size])
+                    
+                    gen_outputs = generator(
+                        decoding_strategy="train_top_p_output_sample",
+                        inputs=gen_inputs,
+                        softmax_temperature=softmax_temperature,
+                        mode=generator_dropout,
+                        mle_context=tiled_random_vector,
+                        top_p=top_p
+                        )
+                    gen_logits = gen_outputs.logits
+                    gen_sample_ids = gen_outputs.sample_id
+                    gen_lengths = get_gen_lengths(gen_sample_ids)
                 else:
-                    gen_inputs = inp[:, 1:tf.shape(inp)[1]-1]
+                    gen_inputs = inp
                     gen_inputs_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(gen_inputs)[1]) # Trim non-ending sentences. 
                     tiled_random_vector = tf.reshape(
                         tf.tile(random_vector, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size+class_size])
@@ -388,7 +425,7 @@ def main(config = None):
                     gen_lengths = get_gen_lengths(gen_sample_ids)
                     
             elif sample_strategy == "scheduled":
-                gen_inputs = inp[:, 1:tf.shape(inp)[1]-1]
+                gen_inputs = inp
                 gen_inputs_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(gen_inputs)[1]) # Trim non-ending sentences. 
                 tiled_random_vector = tf.reshape(
                     tf.tile(random_vector, [1, tf.shape(x)[1]]), [-1, tf.shape(x)[1], context_size+class_size])
@@ -484,7 +521,7 @@ def main(config = None):
         with g.name_scope("disc_train"):
             logger.info("Creating discriminator training subgraph...")
             fake_seq = gen_sample_ids
-            real_seq = inp[:, 1:-1] # remove BOS EOS token as fake does not have.
+            real_seq = inp
             real_seq_lengths = tf.clip_by_value(seq_lengths, 0, tf.shape(real_seq)[1])
             
             r_disc_pos_init_time = tf.expand_dims(tf.range(tf.shape(real_seq)[1]), 0)
@@ -540,7 +577,7 @@ def main(config = None):
                 real_inp = tf.concat([real_inp[:, :, :-1], r_progress_vector], axis = -1)
                 fake_inp = tf.concat([fake_inp[:, :, :-1], f_progress_vector], axis = -1)
                 
-            if "decoder" in config["disc_hparams"]["gpt2_stack"].keys():
+            if config["disc_hparams"]["gpt2_stack"]["use_transformer_encoder"] is False:
                 r_disc_outputs = discriminator(
                     decoding_strategy='train_greedy',
                     inputs=real_inp,
@@ -601,12 +638,12 @@ def main(config = None):
             r_disc_loss = tf.losses.sigmoid_cross_entropy(
                 logits = r_disc_score,
                 multi_class_labels=true_labs, 
-                label_smoothing = config["disc_label_smoothing_epsilon"],
+                label_smoothing=config["disc_label_smoothing_epsilon"],
                 reduction=tf.losses.Reduction.MEAN)
             f_disc_loss = tf.losses.sigmoid_cross_entropy(
                 logits=f_disc_score,
                 multi_class_labels=fake_labs, 
-                label_smoothing = config["disc_label_smoothing_epsilon"],
+                label_smoothing=0,
                 reduction=tf.losses.Reduction.MEAN)
             disc_loss = r_disc_loss + f_disc_loss
             disc_loss.set_shape(disc_loss.shape)
@@ -692,7 +729,7 @@ def main(config = None):
             logger.info("Creating classifier training subgraph...")
 
             # Designate clas input
-            real_label_inp = label_inp[:, 1:-1]
+            real_label_inp = label_inp
             
             r_clas_pos_init_time = tf.expand_dims(tf.range(tf.shape(real_label_inp)[1]), 0)
             r_clas_pos_init_time = tf.broadcast_to(
@@ -708,7 +745,7 @@ def main(config = None):
             label_seq_lengths = tf.clip_by_value(label_seq_lengths, 0, max_length)
 
 
-            if "decoder" in config["clas_hparams"]["gpt2_stack"].keys():
+            if config["clas_hparams"]["gpt2_stack"]["use_transformer_encoder"] is False:
                 r_clas_outputs = classifier(
                     decoding_strategy='train_greedy',
                     inputs=real_label_inp_emb,
@@ -1912,7 +1949,7 @@ def main(config = None):
                         gen_rtns = gen_run_epoch(sess, 'val', sum_writer)
                         total_runtime = total_runtime + gen_rtns["total_runtime"]
                         gen_adv_time = gen_adv_time + gen_rtns["total_runtime"]
-                        logger.info('Gen Val loss:{}'.format(gen_rtns['loss']))
+                        logger.info('\nGen Val loss:{}'.format(gen_rtns['loss']))
                 logger.info("\nTotal runtime after generator mle-train: {}".format(total_runtime))
                 
                 # Check discriminator loss
@@ -1929,7 +1966,7 @@ def main(config = None):
                     disc_rtns = disc_run_epoch(sess, 'train', sum_writer, disc_rtns['step'])
                     total_runtime = total_runtime + disc_rtns["total_runtime"]
                     disc_adv_time = disc_adv_time + disc_rtns["total_runtime"]
-                    logger.info('Disc Adv-Valid Epoch {}+{}'.format(cur_epoch, disc_e))
+                    logger.info('\nDisc Adv-Valid Epoch {}+{}'.format(cur_epoch, disc_e))
                     disc_rtns = disc_run_epoch(sess, 'val', sum_writer, disc_rtns['step'])
                     total_runtime = total_runtime + disc_rtns["total_runtime"]
                     disc_adv_time = disc_adv_time + disc_rtns["total_runtime"]

@@ -143,13 +143,17 @@ for train_pcent in [0.1, 0.3, 0.5, 0.7, 0.9, 1.0]:
             # Run
             with open(data_paths["config_json"], "w") as train_config:
                 json.dump(base_config, train_config)
-                
-            os.system("python3 spamGAN_train_DCG_gpt2.py {}".format(data_paths["config_json"]))
+            
+            train_status = 114514
+            while train_status is not 0:
+                train_status = os.system("nice -n 10 python3 spamGAN_train_DCG_gpt2.py {}".format(data_paths["config_json"]))
             
             # Unit test
             base_config["gen_clas_test"] = True
             with open(data_paths["config_json"], "w") as test_config:
                 json.dump(base_config, test_config)
                 
-            os.system("python3 spamGAN_train_DCG_gpt2.py {}".format(data_paths["config_json"])) 
+            test_status = 114514
+            while test_status is not 0:
+                test_status = os.system("nice -n 10 python3 spamGAN_train_DCG_gpt2.py {}".format(data_paths["config_json"])) 
             

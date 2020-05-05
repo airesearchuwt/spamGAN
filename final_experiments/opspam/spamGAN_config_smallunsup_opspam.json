@@ -15,8 +15,8 @@
 
 	"restore_model": false,
 	"clear_run_logs": false,
-	"log_dir": "/tmp",
-	"checkpoint_dir": "/tmp",
+	"log_dir": "/home/hanfeiyu/Pretrained-spamGAN/ckpt",
+	"checkpoint_dir": "/home/hanfeiyu/Pretrained-spamGAN/ckpt",
 	"load_checkpoint_file": null,
 
 	"gen_clas_test": false,
@@ -76,7 +76,7 @@
 	"class_size": 8,
 
 
-	"disc_label_smoothing_epsilon": 0.05,
+	"disc_label_smoothing_epsilon": 0.5,
 
 	"adv_max_clip": 100,
 	"min_log_prob": 0.1,
@@ -85,7 +85,7 @@
 	"max_pg_loss": 200,
 
 
-	"add_sentence_progress": true,
+	"add_sentence_progress": false,
 
 	"clas_loss_on_fake_lambda": 1.0,
 	"disc_crit_train_on_fake_only": true,
@@ -121,9 +121,9 @@
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<|startoftext|>",
+				"bos_token": "",
 				"delimiter": " ",
-				"eos_token": "<|endoftext|>",
+				"eos_token": "",
 				"data_name": "x",
 				"pad_to_max_seq_length": true
 			},
@@ -154,9 +154,9 @@
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<|startoftext|>",
+				"bos_token": "",
 				"delimiter": " ",
-				"eos_token": "<|endoftext|>",
+				"eos_token": "",
 				"data_name": "x",
 				"pad_to_max_seq_length": true
 			},
@@ -188,9 +188,9 @@
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<|startoftext|>",
+				"bos_token": "",
 				"delimiter": " ",
-				"eos_token": "<|endoftext|>",
+				"eos_token": "",
 				"data_name": "x",
 				"pad_to_max_seq_length": true
 			},
@@ -220,9 +220,9 @@
 				"vocab_file": "./gpt2/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<|startoftext|>",
+				"bos_token": "",
 				"delimiter": " ",
-				"eos_token": "<|endoftext|>",
+				"eos_token": "",
 				"data_name": "x",
 				"pad_to_max_seq_length": true
 			},
@@ -322,26 +322,26 @@
 			"embedding_size": 768,
 			"embed": {
 				"dim": 768,
-				"dropout_rate": 0.4,
+				"dropout_rate": 0.5,
 				"name": "word_embeddings"
 			},
 			"position_size": 1024,
 			"position_embed": {
 				"dim": 768,
-				"dropout_rate": 0.4,
+				"dropout_rate": 0.5,
 				"name": "position_embeddings"
 			},
 
 			"transformer": {
 				"dim": 768,
 				"num_blocks": 12,
-				"embedding_dropout": 0.1,
-				"residual_dropout": 0.1,
+				"embedding_dropout": 0.5,
+				"residual_dropout": 0.5,
 				"multihead_attention": {
 					"use_bias": true,
 					"num_units": 768,
 					"num_heads": 12,
-					"dropout_rate": 0.1,
+					"dropout_rate": 0.5,
 					"output_dim": 768
 				},
 				"initializer": {
@@ -378,7 +378,7 @@
 			"output_layer": {
 				"units": 1,
 				"activation": "linear",
-				"dropout_rate": 0.4,
+				"dropout_rate": 0.5,
 				"name": "gpt2_stack_output"
 			},
 			"name": "discriminator"
@@ -527,7 +527,7 @@
 			"type": "tensorflow.contrib.opt.AdamWOptimizer",
 			"kwargs": {
 				"weight_decay": 1e-7,
-				"learning_rate": 1e-7
+				"learning_rate": 1.25e-7 
 			}
 		},
 		"learning_rate_decay": {
