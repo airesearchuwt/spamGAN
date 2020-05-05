@@ -133,8 +133,7 @@ class Vocab(object):
             raise ValueError("Special begin-of-seq token already exists in the "
                              "vocabulary: '%s'" % self._bos_token)
         if self._eos_token in vocab:
-            raise ValueError("Special end-of-seq token already exists in the "
-                             "vocabulary: '%s'" % self._eos_token)
+            pass
         if self._unk_token in vocab:
             raise ValueError("Special UNK token already exists in the "
                              "vocabulary: '%s'" % self._unk_token)
