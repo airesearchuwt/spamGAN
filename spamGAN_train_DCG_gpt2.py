@@ -169,7 +169,7 @@ def main(config = None):
         # Pre-train Generator subgraph
         with g.name_scope('gen_mle'):
             start_tokens = tf.cast(tf.fill([batch_size, 1], vocab.bos_token_id), dtype=tf.int64)
-            x = tf.concat([start_tokens, inp], axis=-1)
+            x = tf.concat([start_tokens, inp[:, :-1]], axis=-1)
             y = inp 
             y_onehot = tf.one_hot(y, vocab_size)
             
