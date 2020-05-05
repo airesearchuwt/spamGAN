@@ -669,6 +669,5 @@ class GPT2Stack():
                 self.variable_scope.name, use_transformer_encoder=self._use_transformer_encoder
                 )
             
-        print(outputs)
         return outputs
     
