@@ -1775,42 +1775,31 @@ def main(config = None):
             
             # Check if testing
             if config["gen_clas_test"] is not None and config["gen_clas_test"]:
-                dict_all_res = {}
-                dict_bestclas_acc_res = {}
-                dict_bestclas_mixed_res = {}
+                dict_res = {}
+                ckpt = config["clas_test_ckpts"]
                 
-                for ckpt in config["clas_test_ckpts"]:
-                    logger.info("\nRestoring {}: ".format(ckpt))
-                    checkpoint.restore(sess, os.path.join(config["checkpoint_dir"], ckpt))
+                logger.info("\nRestoring {}: ".format(ckpt))
+                checkpoint.restore(sess, os.path.join(config["checkpoint_dir"], ckpt))
+                
+                logger.info("\nTest Classifier: \n")
+                clas_test_outputs = clas_run_epoch(sess, "test", sum_writer, 0)
+                logger.info("\nClassifier test result: \n{}".format(clas_test_outputs))
+                with open(os.path.join(config["checkpoint_dir"], config["clas_pred_output"]), 'w') as f:
+                    for p in clas_test_outputs['r_clas_preds']:
+                        f.write(str(round(p)) + '\n')
+                
+                logger.info("\nTest Generator: \n")
+                gen_test_outputs = gen_run_epoch(sess, 'test', sum_writer, False)
+                logger.info("\nGenerator test result: \n{}".format(gen_test_outputs))
+                with open(os.path.join(config["checkpoint_dir"], config["gen_perp_output"]), 'a') as f:
+                    f.write(os.getcwd() + '\n')
+                    f.write(str(gen_test_outputs['perp']) + '\n')
                     
-                    logger.info("\nTest Classifier: \n")
-                    clas_test_outputs = clas_run_epoch(sess, "test", sum_writer, 0)
-                    logger.info("\nClassifier test result: \n{}".format(clas_test_outputs))
-                    with open(os.path.join(config["checkpoint_dir"], config["clas_pred_output"]), 'w') as f:
-                        for p in clas_test_outputs['r_clas_preds']:
-                            f.write(str(round(p)) + '\n')
+                dict_res["accuracy"] = clas_test_outputs["real_acc"]
+                dict_res["f1 score"] = clas_test_outputs["real_f1"]
+                dict_res["perplexity"] = gen_test_outputs["perp"]
                     
-                    logger.info("\nTest Generator: \n")
-                    gen_test_outputs = gen_run_epoch(sess, 'test', sum_writer, False)
-                    logger.info("\nGenerator test result: \n{}".format(gen_test_outputs))
-                    with open(os.path.join(config["checkpoint_dir"], config["gen_perp_output"]), 'a') as f:
-                        f.write(os.getcwd() + '\n')
-                        f.write(str(gen_test_outputs['perp']) + '\n')
-                        
-                    if "ckpt-all" in ckpt:
-                        dict_all_res["accuracy"] = clas_test_outputs["real_acc"]
-                        dict_all_res["f1 score"] = clas_test_outputs["real_f1"]
-                        dict_all_res["perplexity"] = gen_test_outputs["perp"]
-                    elif "ckpt-bestclas-acc" in ckpt:
-                        dict_bestclas_acc_res["accuracy"] = clas_test_outputs["real_acc"]
-                        dict_bestclas_acc_res["f1 score"] = clas_test_outputs["real_f1"]
-                        dict_bestclas_acc_res["perplexity"] = gen_test_outputs["perp"]
-                    elif "ckpt-bestclas-mixed" in ckpt:
-                        dict_bestclas_mixed_res["accuracy"] = clas_test_outputs["real_acc"]
-                        dict_bestclas_mixed_res["f1 score"] = clas_test_outputs["real_f1"]
-                        dict_bestclas_mixed_res["perplexity"] = gen_test_outputs["perp"]
-                    
-                return dict_all_res, dict_bestclas_acc_res, dict_bestclas_mixed_res
+                return dict_res
             
 
             g.finalize()
@@ -2053,9 +2042,9 @@ def main(config = None):
             logger.info("\nTest Time: {}".format(round(test_time, 2)))
             
             
-            cpu_time = timer.GetCounter()
-            cpu_time = cpu_time/1000.0
-            logger.info("Total CPU time: {} s".format(cpu_time))
+#             cpu_time = timer.GetCounter()
+#             cpu_time = cpu_time/1000.0
+#             logger.info("Total CPU time: {} s".format(cpu_time))
             
             dict_time_res = {
                 "GPU_train_time" : round(total_runtime, 2),
@@ -2066,7 +2055,7 @@ def main(config = None):
                 "disc_adv_time": round(disc_adv_time, 2),
                 "clas_adv_time": round(clas_adv_time, 2),
                 "GPU_test_time"  : round(test_time, 2),
-                "CPU_time" : cpu_time
+#                 "CPU_time" : cpu_time
             }
             return dict_time_res
             
@@ -2128,33 +2117,23 @@ if __name__ == "__main__":
             f.close()
             
         else:
-            dict_all_res, dict_bestclas_acc_res, dict_bestclas_mixed_res = main(config)
-
-            all_file_exists = os.path.isfile(data_paths["all_result_file"])
-            f = open(data_paths["all_result_file"],'a')
-            w = csv.DictWriter(f, dict_all_res.keys())
-            if not all_file_exists:
-                print("Writing all header...")
-                w.writeheader()
-            w.writerow(dict_all_res)
-            f.close()
+            dict_res = main(config)
             
-            bestclas_acc_file_exists = os.path.isfile(data_paths["bestclas_acc_result_file"])
-            f = open(data_paths["bestclas_acc_result_file"],'a')
-            w = csv.DictWriter(f, dict_bestclas_acc_res.keys())
-            if not bestclas_acc_file_exists:
-                print("Writing bestclas-acc header...")
+            if "all" in config["clas_test_ckpts"]:
+                res_file_exists = os.path.isfile(data_paths["all_result_file"])
+                f = open(data_paths["all_result_file"],'a')
+            elif "acc" in config["clas_test_ckpts"]:
+                res_file_exists = os.path.isfile(data_paths["bestclas_acc_result_file"])
+                f = open(data_paths["bestclas_acc_result_file"],'a')
+            elif "mixed" in config["clas_test_ckpts"]:
+                res_file_exists = os.path.isfile(data_paths["bestclas_mixed_result_file"])
+                f = open(data_paths["bestclas_mixed_result_file"],'a')
+                
+            w = csv.DictWriter(f, dict_res.keys())
+            if not res_file_exists:
+                print("Writing result header...")
                 w.writeheader()
-            w.writerow(dict_bestclas_acc_res)
-            f.close()
-            
-            bestclas_mixed_file_exists = os.path.isfile(data_paths["bestclas_mixed_result_file"])
-            f = open(data_paths["bestclas_mixed_result_file"],'a')
-            w = csv.DictWriter(f, dict_bestclas_mixed_res.keys())
-            if not bestclas_mixed_file_exists:
-                print("Writing bestclas-mixed header...")
-                w.writeheader()
-            w.writerow(dict_bestclas_mixed_res)
+            w.writerow(dict_res)
             f.close()
     
     # Not from final_runner.py
