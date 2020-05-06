@@ -37,14 +37,14 @@
 	"batches_per_text_summary": 100,
 
 
-	"g_pretrain_epochs": 0,
-	"d_pretrain_epochs": 0,
-	"d_pretrain_critic_epochs": 0,
-	"c_pretrain_epochs": 0,
-	"adversarial_epochs": 1,
+	"g_pretrain_epochs": 10,
+	"d_pretrain_epochs": 1,
+	"d_pretrain_critic_epochs": 1,
+	"c_pretrain_epochs": 4,
+	"adversarial_epochs": 5,
 
 	"disc_adv_epochs": 1,
-	"clas_adv_epochs": 1,
+	"clas_adv_epochs": 5,
 
 	"gen_adv_epochs": 2,
 	"g_unlab_every_n_adv": -1,
