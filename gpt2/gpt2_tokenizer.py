@@ -107,7 +107,17 @@ def make_bpe_file(input_path, output_path, encoder_path="./gpt2-small/encoder.js
             sequences = " ".join(tokens)
             output.write(sequences + "\n")
             
-            
+def decode_from_bpe(
+        input_path, output_path, 
+        encoder_path="./gpt2-small/encoder.json", vocab_path="./gpt2-small/vocab.bpe"):
+    bpe = get_bpe_from_files(encoder_path=encoder_path, vocab_path=vocab_path)
+    
+    with open(input_path, "r") as input, open(output_path, "w") as output:
+        lines = input.readlines()
+        for line in lines:
+            ids, tokens = bpe.encode(line[:-1])
+            sequences = " ".join(tokens)
+            output.write(sequences + "\n")
             
 def make_gpt2_vocab(vocab_path="./gpt2-small/encoder.json", output_path="./gpt2-small/gpt2_vocab.txt"):
     with codecs.open(vocab_path, "r", "utf8") as vocab, open(output_path, "w") as output:
@@ -220,7 +230,7 @@ if __name__ == '__main__':
 #     make_bpe_file("../data/yelp/labeled10/train_review.txt", "./yelp_train_reviews_bpe.txt")
 #     make_bpe_file("../data/yelp/labeled10/val_review.txt", "./yelp_val_reviews_bpe.txt")
 #     make_bpe_file("../data/yelp/test_review.txt", "./yelp_test_reviews_bpe.txt")
-    make_gpt2_vocab()
+#     make_gpt2_vocab()
     
 #     wipe_out_short_sentences(
 #         "./yelp_train_reviews_bpe.txt",
@@ -254,5 +264,6 @@ if __name__ == '__main__':
 #         "./yelp_train_reviews_bpe_nounsup.txt",
 #         "./yelp_train_labels_nounsup.txt"
 #         )
+
 
 

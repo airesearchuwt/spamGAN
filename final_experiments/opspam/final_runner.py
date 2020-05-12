@@ -159,3 +159,6 @@ for train_pcent in [0.1, 0.3, 0.5, 0.7, 0.9, 1.0]:
                 while test_status is not 0:
                     test_status = os.system("nice -n 10 python3 spamGAN_train_DCG_gpt2.py {}".format(data_paths["config_json"])) 
             
+            # Clean disk space
+            os.system("rm ./spamGAN_output/ckpt/*")  
+

@@ -2042,9 +2042,9 @@ def main(config = None):
             logger.info("\nTest Time: {}".format(round(test_time, 2)))
             
             
-#             cpu_time = timer.GetCounter()
-#             cpu_time = cpu_time/1000.0
-#             logger.info("Total CPU time: {} s".format(cpu_time))
+            cpu_time = timer.GetCounter()
+            cpu_time = cpu_time/1000.0
+            logger.info("Total CPU time: {} s".format(cpu_time))
             
             dict_time_res = {
                 "GPU_train_time" : round(total_runtime, 2),
@@ -2055,7 +2055,7 @@ def main(config = None):
                 "disc_adv_time": round(disc_adv_time, 2),
                 "clas_adv_time": round(clas_adv_time, 2),
                 "GPU_test_time"  : round(test_time, 2),
-#                 "CPU_time" : cpu_time
+                "CPU_time" : cpu_time
             }
             return dict_time_res
             
