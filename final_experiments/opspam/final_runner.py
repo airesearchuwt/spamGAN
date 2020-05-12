@@ -37,9 +37,18 @@ def make_data(trp, usp, run):
     vl = labs[round(trp * len(revs)):]
  
     if len(vr) == 0 :
-        # just add a fake as a workaround
-        vr = revs[0:100]
-        vl = labs[0:100]
+        # If train dataset exhausted, then fetch val dataset from test dataset
+        with open(test_revs, 'r') as f:
+            val_revs = f.readlines()
+        with open(test_labs, 'r') as f:
+            val_labs = f.readlines()
+        
+        val_revs = [str(val_revs[i]) for i in shfl_idx]
+        val_labs = [str(val_labs[i]) for i in shfl_idx]
+        
+        vr = val_revs[:round(0.1*len(tr))]
+        vl = val_labs[:round(0.1*len(tr))]
+        
     with open(unsup_revs_path, 'r') as f:
         unsup_revs_full = f.readlines()
     random.shuffle(unsup_revs_full)

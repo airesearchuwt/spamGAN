@@ -85,7 +85,7 @@
 	"max_pg_loss": 200,
 
 
-	"add_sentence_progress": true,
+	"add_sentence_progress": false,
 
 	"clas_loss_on_fake_lambda": 1.0,
 	"disc_crit_train_on_fake_only": true,
@@ -118,12 +118,12 @@
 		"name": "train_data",
 		"datasets": [{
 				"files": ["./gpt2/yelp_train_reviews_bpe.txt"],
-				"vocab_file": "./gpt2/gpt2_vocab.txt",
+				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<|startoftext|>",
+				"bos_token": "",
 				"delimiter": " ",
-				"eos_token": "<|endoftext|>",
+				"eos_token": "",
 				"data_name": "x",
 				"pad_to_max_seq_length": true
 			},
@@ -151,12 +151,12 @@
 		"name": "train_data",
 		"datasets": [{
 				"files": ["./gpt2/yelp_train_reviews_bpe.txt"],
-				"vocab_file": "./gpt2/gpt2_vocab.txt",
+				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<|startoftext|>",
+				"bos_token": "",
 				"delimiter": " ",
-				"eos_token": "<|endoftext|>",
+				"eos_token": "",
 				"data_name": "x",
 				"pad_to_max_seq_length": true
 			},
@@ -185,12 +185,12 @@
 
 		"datasets": [{
 				"files": ["./gpt2/yelp_val_reviews_bpe.txt"],
-				"vocab_file": "./gpt2/gpt2_vocab.txt",
+				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<|startoftext|>",
+				"bos_token": "",
 				"delimiter": " ",
-				"eos_token": "<|endoftext|>",
+				"eos_token": "",
 				"data_name": "x",
 				"pad_to_max_seq_length": true
 			},
@@ -217,12 +217,12 @@
 		"name": "test_data",
 		"datasets": [{
 				"files": ["./gpt2/yelp_test_reviews_bpe.txt"],
-				"vocab_file": "./gpt2/gpt2_vocab.txt",
+				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
-				"bos_token": "<|startoftext|>",
+				"bos_token": "",
 				"delimiter": " ",
-				"eos_token": "<|endoftext|>",
+				"eos_token": "",
 				"data_name": "x",
 				"pad_to_max_seq_length": true
 			},
@@ -322,13 +322,13 @@
 			"embedding_size": 768,
 			"embed": {
 				"dim": 768,
-				"dropout_rate": 0.4,
+				"dropout_rate": 0.5,
 				"name": "word_embeddings"
 			},
 			"position_size": 1024,
 			"position_embed": {
 				"dim": 768,
-				"dropout_rate": 0.4,
+				"dropout_rate": 0.5,
 				"name": "position_embeddings"
 			},
 
@@ -378,7 +378,7 @@
 			"output_layer": {
 				"units": 1,
 				"activation": "linear",
-				"dropout_rate": 0.4,
+				"dropout_rate": 0.5,
 				"name": "gpt2_stack_output"
 			},
 			"name": "discriminator"
