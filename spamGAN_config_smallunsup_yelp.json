@@ -106,7 +106,7 @@
 	"train_data": {
 		"num_epochs": 1,
 		"batch_size": 2,
-		"allow_smaller_final_batch": true,
+		"allow_smaller_final_batch": false,
 		"shuffle": true,
 		"shuffle_buffer_size": null,
 		"shard_and_shuffle": false,
@@ -139,7 +139,7 @@
 	"clas_train_data": {
 		"num_epochs": 1,
 		"batch_size": 2,
-		"allow_smaller_final_batch": true,
+		"allow_smaller_final_batch": false,
 		"shuffle": true,
 		"shuffle_buffer_size": null,
 		"shard_and_shuffle": false,
@@ -172,7 +172,7 @@
 	"val_data": {
 		"num_epochs": 1,
 		"batch_size": 2,
-		"allow_smaller_final_batch": true,
+		"allow_smaller_final_batch": false,
 		"shuffle": true,
 		"shuffle_buffer_size": null,
 		"shard_and_shuffle": false,
@@ -206,7 +206,7 @@
 	"test_data": {
 		"num_epochs": 1,
 		"batch_size": 2,
-		"allow_smaller_final_batch": true,
+		"allow_smaller_final_batch": false,
 		"shuffle": false,
 		"shuffle_buffer_size": null,
 		"shard_and_shuffle": false,

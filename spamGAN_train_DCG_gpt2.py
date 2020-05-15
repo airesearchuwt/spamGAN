@@ -612,20 +612,25 @@ def main(config = None):
                 f_disc_q_logit = f_disc_outputs.logits
                 f_disc_cell_outputs = f_disc_outputs.cell_outputs
 
+
+                
+            traitor_size = tf.cast(
+                tf.cast(batch_size, tf.float32)*config["disc_traitor_rate"], tf.int32)
+            try:
+                r_disc_logits_traitor = r_disc_q_logit[traitor_size:, :, :]
+                f_disc_logits_traitor = f_disc_q_logit[traitor_size:, :, :]
+                r_disc_logits_loyalty = r_disc_q_logit[:-traitor_size, :, :]
+                f_disc_logits_loyalty = f_disc_q_logit[:-traitor_size, :, :]
             
+                r_disc_q_logit = tf.concat([r_disc_logits_loyalty, f_disc_logits_traitor], axis=0)
+                f_disc_q_logit = tf.concat([f_disc_logits_loyalty, r_disc_logits_traitor], axis=0)
+            except tf.python.framework.errors_impl.InvalidArgumentError:
+                r_disc_q_logit, f_disc_q_logit = f_disc_q_logit, r_disc_q_logit
             
             r_disc_q_logit_sq = tf.squeeze(r_disc_q_logit)
             f_disc_q_logit_sq = tf.squeeze(f_disc_q_logit)
             
-            traitor_size = tf.cast(
-                tf.cast(batch_size, tf.float32)*config["disc_traitor_rate"], tf.int32)
-            r_disc_traitor = r_disc_q_logit_sq[traitor_size:, :]
-            f_disc_traitor = f_disc_q_logit_sq[traitor_size:, :]
-            r_disc_loyalty = r_disc_q_logit_sq[:-traitor_size, :]
-            f_disc_loyalty = f_disc_q_logit_sq[:-traitor_size, :]
             
-            r_disc_q_logit_sq = tf.concat([r_disc_loyalty, f_disc_traitor], axis=0)
-            f_disc_q_logit_sq = tf.concat([f_disc_loyalty, r_disc_traitor], axis=0)
             
             r_disc_score = tx.losses.mask_and_reduce(r_disc_q_logit_sq,
                                               real_seq_lengths,
