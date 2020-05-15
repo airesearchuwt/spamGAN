@@ -43,8 +43,9 @@ def make_data(trp, usp, run):
         with open(test_labs, 'r') as f:
             val_labs = f.readlines()
         
-        val_revs = [str(val_revs[i]) for i in shfl_idx]
-        val_labs = [str(val_labs[i]) for i in shfl_idx]
+        val_shfl_idx = random.sample(list(range(len(val_revs))), len(val_revs))
+        val_revs = [str(val_revs[i]) for i in val_shfl_idx]
+        val_labs = [str(val_labs[i]) for i in val_shfl_idx]
         
         vr = val_revs[:round(0.1*len(tr))]
         vl = val_labs[:round(0.1*len(tr))]
