@@ -48,7 +48,7 @@
 
 	"gen_adv_epochs": 2,
 	"g_unlab_every_n_adv": -1,
-	"gen_mle_adv_epochs": 1,
+	"gen_mle_adv_epochs": 2,
 
 	"adv_train_max_gen_examples": 1000,
 	"adv_disc_max_ex": 1000,
