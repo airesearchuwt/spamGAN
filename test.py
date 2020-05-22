@@ -54,29 +54,24 @@ def test_random_traitor(times):
         
 
 if __name__ == "__main__":
-#     x = tf.constant([[4], [3], [1], [7]])
-#     y = tf.constant([9, 10, 11, 12])
-#     shape = y.shape
-#     
-#     batch_size = 2
-#     time = 16
-#     
-#     sample_ids = tf.constant([1, -1])
-#     sample_ids_after = tf.reshape(sample_ids, [tf.shape(sample_ids)[0], -1])
-#     
-#     where_sampling = math_ops.cast(
-#         array_ops.where(sample_ids > -1), dtypes.int32)
-#     where_not_sampling = math_ops.cast(
-#         array_ops.where(sample_ids <= -1), dtypes.int32)
-#     
-#     times = tf.ones(batch_size, dtype=tf.int32) * (time + 1)
-#     
-#     with tf.compat.v1.Session() as sess:
-#         print("previous: {}".format(sample_ids))
-#         print("after: {}".format(sample_ids_after))
-#         print(where_sampling.eval())
-#         print(where_not_sampling.eval())
-#         print(array_ops.gather_nd(sample_ids, where_sampling).eval())
-#         print(array_ops.gather_nd(sample_ids, where_not_sampling).eval())
-#         print("times: {}".format(times.eval()))
-#         print(array_ops.scatter_nd(x, y, shape).eval())
+#     all_data_labels = tf.constant(
+#         [[1], [0], [1], [0], 
+#         [-1], [-1], [-1], [-1]]
+#         )
+    all_data_labels = tf.constant(
+        [[1], [0], [1], [0]]
+        )
+    labeled = tf.logical_not(tf.equal(all_data_labels, -1))
+    any_labeled = tf.reduce_any(labeled)
+    
+    reclass_unlab = tf.zeros_like(all_data_labels)
+    true_classes = tf.where(labeled, all_data_labels, reclass_unlab)
+     
+    with tf.compat.v1.Session() as sess:
+        print("all_data_labels: {}".format(all_data_labels.eval()))
+        print("labeled: {}".format(labeled.eval()))
+        print("reclass_unlab: {}".format(reclass_unlab.eval()))
+        print("true_classes: {}".format(true_classes.eval()))
+        print("true_classes shape: {}".format(true_classes.shape))
+        
+        

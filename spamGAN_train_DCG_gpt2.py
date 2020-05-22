@@ -253,15 +253,25 @@ def main(config = None):
             start_tokens = tf.cast(tf.fill([batch_size], 
                                    vocab.bos_token_id),
                                    dtype=tf.int32)
-            random_context = tf.random.normal([batch_size, config["noise_size"]])
-            class_prior = tf.distributions.Bernoulli(probs=config["prior_prob"])
-            random_classes = class_prior.sample((batch_size, 1))
+            end_token = vocab.eos_token_id
+            
+            def get_random_classes():
+                class_prior = tf.distributions.Bernoulli(probs=config["prior_prob"])
+                random_classes = class_prior.sample((batch_size, 1))
+                return random_classes
+            def get_teacher_classes():
+                teacher_classes = tf.reshape(data_labels, [batch_size, 1])
+                return teacher_classes
+            
+            random_classes = tf.cond(use_unsup,
+                                     lambda: get_random_classes(),
+                                     lambda: get_teacher_classes())
+            random_context = tf.random.normal((batch_size, context_size))
             tiled_random_classes = tf.tile(random_classes, [1, class_size]) # Increase the possibility of exposure
             random_vector = tf.concat([random_context, 
-                                       tf.cast(tiled_random_classes, tf.float32)], 
-                                       axis=-1)
-            random_class_onehots = tf.one_hot(random_classes, 2, axis=-1)
-            end_token = vocab.eos_token_id
+                           tf.cast(tiled_random_classes, tf.float32)], 
+                           axis=-1)
+
             
             # Specify sample strategy
             sample_strategy = config["sample_strategy"]
@@ -459,12 +469,12 @@ def main(config = None):
             
             elif sample_strategy == "beam_search":
                 beam_width = config["beam_width"]
-                beam_random_context = tf.random.normal([beam_width * batch_size, config["noise_size"]])
-                beam_class_prior = tf.distributions.Bernoulli(probs=config["prior_prob"])
-                beam_random_classes = class_prior.sample((beam_width * batch_size, 1))
-                beam_tiled_random_classes = tf.tile(beam_random_classes, [1, class_size]) # Increase the possibility of exposure
-                beam_random_vector = tf.concat([beam_random_context, 
-                                           tf.cast(beam_tiled_random_classes, tf.float32)], 
+                random_context = tf.random.normal([beam_width * batch_size, context_size])
+                class_prior = tf.distributions.Bernoulli(probs=config["prior_prob"])
+                random_classes = class_prior.sample((beam_width * batch_size, 1))
+                tiled_random_classes = tf.tile(random_classes, [1, class_size]) # Increase the possibility of exposure
+                random_vector = tf.concat([random_context, 
+                                           tf.cast(tiled_random_classes, tf.float32)], 
                                            axis=-1)
                 gen_outputs = generator(
                     decoding_strategy="beam_search",
@@ -473,7 +483,7 @@ def main(config = None):
                     start_tokens=start_tokens,
                     end_token=end_token,
                     max_decoding_length=max_length,
-                    sample_context=beam_random_vector
+                    sample_context=random_vector
                     )
                 
                 if beam_width == 1:

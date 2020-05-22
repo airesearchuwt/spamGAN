@@ -118,7 +118,7 @@
 		"name": "train_data",
 		"datasets": [{
 				"files": ["./gpt2/minrun_train_reviews_bpe.txt"],
-				"vocab_file": "./gpt2/gpt2_vocab.txt",
+				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
 				"bos_token": "",
@@ -151,7 +151,7 @@
 		"name": "train_data",
 		"datasets": [{
 				"files": ["./gpt2/minrun_train_reviews_bpe_nounsup.txt"],
-				"vocab_file": "./gpt2/gpt2_vocab.txt",
+				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
 				"bos_token": "",
@@ -185,7 +185,7 @@
 
 		"datasets": [{
 				"files": ["./gpt2/minrun_val_reviews_bpe.txt"],
-				"vocab_file": "./gpt2/gpt2_vocab.txt",
+				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
 				"bos_token": "",
@@ -217,7 +217,7 @@
 		"name": "test_data",
 		"datasets": [{
 				"files": ["./gpt2/minrun_test_reviews_bpe.txt"],
-				"vocab_file": "./gpt2/gpt2_vocab.txt",
+				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
 				"bos_token": "",
