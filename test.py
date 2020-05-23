@@ -54,24 +54,28 @@ def test_random_traitor(times):
         
 
 if __name__ == "__main__":
+    batch_size = 8
+    class_prob = 0.5
+    
 #     all_data_labels = tf.constant(
-#         [[1], [0], [1], [0], 
+#         [[1], [1], [1], [-1], 
 #         [-1], [-1], [-1], [-1]]
 #         )
     all_data_labels = tf.constant(
-        [[1], [0], [1], [0]]
+        [-1, -1, -1, -1, -1, -1, -1, -1]
         )
     labeled = tf.logical_not(tf.equal(all_data_labels, -1))
     any_labeled = tf.reduce_any(labeled)
     
-    reclass_unlab = tf.zeros_like(all_data_labels)
-    true_classes = tf.where(labeled, all_data_labels, reclass_unlab)
+    class_prior = tf.distributions.Bernoulli(probs=class_prob)
+    random_classes = class_prior.sample((batch_size))
+    mixed_classes = tf.where(labeled, all_data_labels, random_classes)
      
     with tf.compat.v1.Session() as sess:
         print("all_data_labels: {}".format(all_data_labels.eval()))
         print("labeled: {}".format(labeled.eval()))
-        print("reclass_unlab: {}".format(reclass_unlab.eval()))
-        print("true_classes: {}".format(true_classes.eval()))
-        print("true_classes shape: {}".format(true_classes.shape))
+        print("random_classes: {}".format(random_classes.eval()))
+        print("mixed_classes: {}".format(mixed_classes.eval()))
+        print("mixed_classes shape: {}".format(mixed_classes.shape))
         
         

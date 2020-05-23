@@ -48,11 +48,11 @@
 
 	"gen_adv_epochs": 2,
 	"g_unlab_every_n_adv": -1,
-	"gen_mle_adv_epochs": 2,
+	"gen_mle_adv_epochs": 1,
 
 	"adv_train_max_gen_examples": 1000,
 	"adv_disc_max_ex": 1000,
-	"adv_gen_train_with_unsup": false,
+	"adv_gen_train_with_unsup": true,
 
 
 	"gen_es_tolerance": 0.005,

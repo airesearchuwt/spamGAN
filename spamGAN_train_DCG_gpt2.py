@@ -19,7 +19,7 @@ from texar.tf.utils.mode import is_train_mode
 
 
 class Generator(tf.keras.Model):
-    """Generator wrapper for checkpointing"""
+    """Generator wrapper"""
     def __init__(self, gen_config):
         super(Generator, self).__init__()
         self.decoder = GPT2Stack(hparams=gen_config["gpt2_stack"])
@@ -34,6 +34,7 @@ class Discriminator(tf.keras.Model):
         self.embedder = self.encoder.embeddings()
 
 class Classifier(tf.keras.Model):
+    """Classifier wrapper"""
     def __init__(self, class_config):
         super(Classifier, self).__init__()
         self.encoder = GPT2Stack(hparams=class_config["gpt2_stack"])
@@ -255,17 +256,11 @@ def main(config = None):
                                    dtype=tf.int32)
             end_token = vocab.eos_token_id
             
-            def get_random_classes():
-                class_prior = tf.distributions.Bernoulli(probs=config["prior_prob"])
-                random_classes = class_prior.sample((batch_size, 1))
-                return random_classes
-            def get_teacher_classes():
-                teacher_classes = tf.reshape(data_labels, [batch_size, 1])
-                return teacher_classes
-            
-            random_classes = tf.cond(use_unsup,
-                                     lambda: get_random_classes(),
-                                     lambda: get_teacher_classes())
+            unsup_class_prior = tf.distributions.Bernoulli(probs=config["prior_prob"])
+            unsup_random_classes = unsup_class_prior.sample((batch_size))
+            random_classes = tf.reshape(
+                tf.where(labeled, all_data_labels, unsup_random_classes),
+                [batch_size, 1])
             random_context = tf.random.normal((batch_size, context_size))
             tiled_random_classes = tf.tile(random_classes, [1, class_size]) # Increase the possibility of exposure
             random_vector = tf.concat([random_context, 
