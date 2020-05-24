@@ -19,7 +19,7 @@ import wrapper
 
 
 class Generator(tf.keras.Model):
-    """Generator wrapper for checkpointing"""
+    """Generator wrapper"""
     def __init__(self, gen_config):
         super(Generator, self).__init__()
         self.decoder = GPT2Stack(hparams=gen_config["gpt2_stack"])
@@ -34,6 +34,7 @@ class Discriminator(tf.keras.Model):
         self.embedder = self.encoder.embeddings()
 
 class Classifier(tf.keras.Model):
+    """Classifier wrapper"""
     def __init__(self, class_config):
         super(Classifier, self).__init__()
         self.encoder = GPT2Stack(hparams=class_config["gpt2_stack"])
@@ -212,7 +213,7 @@ def main(config = None):
             if config["is_gpt2_trainable"] is True:
                 g_variables = tx.utils.collect_trainable_variables([generator])
             else:
-                raise ValueError(f"Generator is frozen")
+                raise ValueError(r"Generator is frozen")
                 
             mle_train_op = mle_optimizer.minimize(loss_mle,
                                                   global_step=global_step,
@@ -249,7 +250,7 @@ def main(config = None):
             else:
                 max_length = tf.Variable(config["max_decoding_length_infer"], dtype=tf.int32)
             logger.info("Creating token sequence sampling subgraph...")
-             
+            
             start_tokens = tf.cast(tf.fill([batch_size], 
                                    vocab.bos_token_id),
                                    dtype=tf.int32)
@@ -463,12 +464,12 @@ def main(config = None):
             
             elif sample_strategy == "beam_search":
                 beam_width = config["beam_width"]
-                beam_random_context = tf.random.normal([beam_width * batch_size, config["noise_size"]])
-                beam_class_prior = tf.distributions.Bernoulli(probs=config["prior_prob"])
-                beam_random_classes = class_prior.sample((beam_width * batch_size, 1))
-                beam_tiled_random_classes = tf.tile(beam_random_classes, [1, class_size]) # Increase the possibility of exposure
-                beam_random_vector = tf.concat([beam_random_context, 
-                                           tf.cast(beam_tiled_random_classes, tf.float32)], 
+                random_context = tf.random.normal([beam_width * batch_size, context_size])
+                class_prior = tf.distributions.Bernoulli(probs=config["prior_prob"])
+                random_classes = class_prior.sample((beam_width * batch_size, 1))
+                tiled_random_classes = tf.tile(random_classes, [1, class_size]) # Increase the possibility of exposure
+                random_vector = tf.concat([random_context, 
+                                           tf.cast(tiled_random_classes, tf.float32)], 
                                            axis=-1)
                 gen_outputs = generator(
                     decoding_strategy="beam_search",
@@ -477,7 +478,7 @@ def main(config = None):
                     start_tokens=start_tokens,
                     end_token=end_token,
                     max_decoding_length=max_length,
-                    sample_context=beam_random_vector
+                    sample_context=random_vector
                     )
                 
                 if beam_width == 1:
@@ -616,20 +617,25 @@ def main(config = None):
                 f_disc_q_logit = f_disc_outputs.logits
                 f_disc_cell_outputs = f_disc_outputs.cell_outputs
 
+
+                
+            traitor_size = tf.cast(
+                tf.cast(batch_size, tf.float32)*config["disc_traitor_rate"], tf.int32)
+            try:
+                r_disc_logits_traitor = r_disc_q_logit[traitor_size:, :, :]
+                f_disc_logits_traitor = f_disc_q_logit[traitor_size:, :, :]
+                r_disc_logits_loyalty = r_disc_q_logit[:-traitor_size, :, :]
+                f_disc_logits_loyalty = f_disc_q_logit[:-traitor_size, :, :]
             
+                r_disc_q_logit = tf.concat([r_disc_logits_loyalty, f_disc_logits_traitor], axis=0)
+                f_disc_q_logit = tf.concat([f_disc_logits_loyalty, r_disc_logits_traitor], axis=0)
+            except tf.python.framework.errors_impl.InvalidArgumentError:
+                r_disc_q_logit, f_disc_q_logit = f_disc_q_logit, r_disc_q_logit
             
             r_disc_q_logit_sq = tf.squeeze(r_disc_q_logit)
             f_disc_q_logit_sq = tf.squeeze(f_disc_q_logit)
             
-            traitor_size = tf.cast(
-                tf.cast(batch_size, tf.float32)*config["disc_traitor_rate"], tf.int32)
-            r_disc_traitor = r_disc_q_logit_sq[traitor_size:, :]
-            f_disc_traitor = f_disc_q_logit_sq[traitor_size:, :]
-            r_disc_loyalty = r_disc_q_logit_sq[:-traitor_size, :]
-            f_disc_loyalty = f_disc_q_logit_sq[:-traitor_size, :]
             
-            r_disc_q_logit_sq = tf.concat([r_disc_loyalty, f_disc_traitor], axis=0)
-            f_disc_q_logit_sq = tf.concat([f_disc_loyalty, r_disc_traitor], axis=0)
             
             r_disc_score = tx.losses.mask_and_reduce(r_disc_q_logit_sq,
                                               real_seq_lengths,

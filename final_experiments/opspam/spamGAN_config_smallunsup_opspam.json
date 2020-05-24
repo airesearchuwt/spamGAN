@@ -46,9 +46,9 @@
 	"disc_adv_epochs": 1,
 	"clas_adv_epochs": 5,
 
-	"gen_adv_epochs": 2,
+	"gen_adv_epochs": 4,
 	"g_unlab_every_n_adv": -1,
-	"gen_mle_adv_epochs": 1,
+	"gen_mle_adv_epochs": 2,
 
 	"adv_train_max_gen_examples": 1000,
 	"adv_disc_max_ex": 1000,
@@ -106,7 +106,7 @@
 	"train_data": {
 		"num_epochs": 1,
 		"batch_size": 2,
-		"allow_smaller_final_batch": false,
+		"allow_smaller_final_batch": true,
 		"shuffle": true,
 		"shuffle_buffer_size": null,
 		"shard_and_shuffle": false,
@@ -118,7 +118,7 @@
 		"name": "train_data",
 		"datasets": [{
 				"files": ["./gpt2/minrun_train_reviews_bpe.txt"],
-				"vocab_file": "./gpt2/gpt2_vocab.txt",
+				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
 				"bos_token": "",
@@ -139,7 +139,7 @@
 	"clas_train_data": {
 		"num_epochs": 1,
 		"batch_size": 2,
-		"allow_smaller_final_batch": false,
+		"allow_smaller_final_batch": true,
 		"shuffle": true,
 		"shuffle_buffer_size": null,
 		"shard_and_shuffle": false,
@@ -151,7 +151,7 @@
 		"name": "train_data",
 		"datasets": [{
 				"files": ["./gpt2/minrun_train_reviews_bpe_nounsup.txt"],
-				"vocab_file": "./gpt2/gpt2_vocab.txt",
+				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
 				"bos_token": "",
@@ -172,7 +172,7 @@
 	"val_data": {
 		"num_epochs": 1,
 		"batch_size": 2,
-		"allow_smaller_final_batch": false,
+		"allow_smaller_final_batch": true,
 		"shuffle": true,
 		"shuffle_buffer_size": null,
 		"shard_and_shuffle": false,
@@ -185,7 +185,7 @@
 
 		"datasets": [{
 				"files": ["./gpt2/minrun_val_reviews_bpe.txt"],
-				"vocab_file": "./gpt2/gpt2_vocab.txt",
+				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
 				"bos_token": "",
@@ -206,7 +206,7 @@
 	"test_data": {
 		"num_epochs": 1,
 		"batch_size": 2,
-		"allow_smaller_final_batch": false,
+		"allow_smaller_final_batch": true,
 		"shuffle": false,
 		"shuffle_buffer_size": null,
 		"shard_and_shuffle": false,
@@ -217,7 +217,7 @@
 		"name": "test_data",
 		"datasets": [{
 				"files": ["./gpt2/minrun_test_reviews_bpe.txt"],
-				"vocab_file": "./gpt2/gpt2_vocab.txt",
+				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
 				"bos_token": "",
@@ -527,7 +527,7 @@
 			"type": "tensorflow.contrib.opt.AdamWOptimizer",
 			"kwargs": {
 				"weight_decay": 1e-6,
-				"learning_rate": 6.25e-6
+				"learning_rate": 6.25e-6 
 			}
 		},
 		"learning_rate_decay": {
@@ -596,7 +596,7 @@
 		"gradient_noise_scale": null,
 		"name": null
 	},
-
+	
 	"c_crit_opt_hparams": {
 		"optimizer": {
 			"type": "tensorflow.contrib.opt.AdamWOptimizer",

@@ -213,7 +213,7 @@ def main(config = None):
             if config["is_gpt2_trainable"] is True:
                 g_variables = tx.utils.collect_trainable_variables([generator])
             else:
-                raise ValueError(f"Generator is frozen")
+                raise ValueError(r"Generator is frozen")
                 
             mle_train_op = mle_optimizer.minimize(loss_mle,
                                                   global_step=global_step,
