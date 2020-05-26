@@ -114,7 +114,7 @@ iter = 5
 for train_pcent in trp_list:
     for unsup_pcent in usp_list:
         for run in range(iter):
-            base_config_file = "spamGAN_config_smallunsup_opspam.json"
+            base_config_file = "spamGAN_config_smallunsup_yelp.json"
             base_config = json.loads(open(base_config_file).read())
             data_paths = make_data(train_pcent, unsup_pcent, run)
             
