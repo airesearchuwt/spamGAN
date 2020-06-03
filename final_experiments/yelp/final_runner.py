@@ -161,6 +161,8 @@ for train_pcent in trp_list:
                 while test_status is not 0:
                     test_status = os.system("nice -n 15 python3.6 spamGAN_train_DCG_gpt2.py {}".format(data_paths["config_json"])) 
             
-            # Clean disk space
+            # Release disk resource
             os.system("rm ./spamGAN_output/ckpt/*")  
 
+# Stop instance once finished
+os.system("sudo shutdown -P 0")
