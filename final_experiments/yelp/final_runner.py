@@ -147,7 +147,7 @@ for train_pcent in trp_list:
             
             train_status = 114514
             while train_status is not 0:
-                train_status = os.system("nice -n 15 python3.6 spamGAN_train_DCG_gpt2.py {}".format(data_paths["config_json"]))
+                train_status = os.system("nice -n 10 python3.6 spamGAN_train_DCG_gpt2.py {}".format(data_paths["config_json"]))
             
             # Unit test
             base_config["gen_clas_test"] = True
@@ -159,7 +159,7 @@ for train_pcent in trp_list:
                     
                 test_status = 114514
                 while test_status is not 0:
-                    test_status = os.system("nice -n 15 python3.6 spamGAN_train_DCG_gpt2.py {}".format(data_paths["config_json"])) 
+                    test_status = os.system("nice -n 10 python3.6 spamGAN_train_DCG_gpt2.py {}".format(data_paths["config_json"])) 
             
             # Release disk resource
             os.system("rm ./spamGAN_output/ckpt/*")  
