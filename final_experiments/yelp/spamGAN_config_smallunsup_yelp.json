@@ -44,13 +44,13 @@
 	"adversarial_epochs": 5,
 
 	"disc_adv_epochs": 1,
-	"clas_adv_epochs": 2,
+	"clas_adv_epochs": 1,
 
 	"gen_adv_epochs": 2,
 	"g_unlab_every_n_adv": -1,
 	"gen_mle_adv_epochs": 1,
 
-	"adv_train_max_gen_examples": 1000,
+	"adv_train_max_gen_examples": 2000,
 	"adv_disc_max_ex": 300,
 	"adv_gen_train_with_unsup": true,
 
@@ -63,10 +63,10 @@
 	"clas_patience": 10,
 
 
-	"max_decoding_length": 256,
-	"max_decoding_length_infer": 256,
-	"annealing_length": 256,
-	"adversarial_length": 256,
+	"max_decoding_length": 424,
+	"max_decoding_length_infer": 424,
+	"annealing_length": 424,
+	"adversarial_length": 424,
 	
 
 	"linear_decay_pg_weights": true,
@@ -119,7 +119,7 @@
 		"datasets": [{
 				"files": ["./gpt2/yelp_train_reviews_bpe.txt"],
 				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
-				"max_seq_length": 256,
+				"max_seq_length": 424,
 				"length_filter_mode": "truncate",
 				"bos_token": "",
 				"delimiter": " ",
@@ -152,7 +152,7 @@
 		"datasets": [{
 				"files": ["./gpt2/yelp_train_reviews_bpe.txt"],
 				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
-				"max_seq_length": 256,
+				"max_seq_length": 424,
 				"length_filter_mode": "truncate",
 				"bos_token": "",
 				"delimiter": " ",
@@ -186,7 +186,7 @@
 		"datasets": [{
 				"files": ["./gpt2/yelp_val_reviews_bpe.txt"],
 				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
-				"max_seq_length": 256,
+				"max_seq_length": 424,
 				"length_filter_mode": "truncate",
 				"bos_token": "",
 				"delimiter": " ",
@@ -218,7 +218,7 @@
 		"datasets": [{
 				"files": ["./gpt2/yelp_test_reviews_bpe.txt"],
 				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
-				"max_seq_length": 256,
+				"max_seq_length": 424,
 				"length_filter_mode": "truncate",
 				"bos_token": "",
 				"delimiter": " ",
@@ -527,7 +527,7 @@
 			"type": "tensorflow.contrib.opt.AdamWOptimizer",
 			"kwargs": {
 				"weight_decay": 1e-6,
-				"learning_rate": 6.25e-6
+				"learning_rate": 5.25e-6
 			}
 		},
 		"learning_rate_decay": {
