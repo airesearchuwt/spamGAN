@@ -1913,6 +1913,9 @@ def main(config = None):
             min_loss = 1e8
             patience = 0
             clas_rtns = {'step' : 0, 'real_acc': 0}
+            clas_pre_max_acc = 0
+            clas_pre_max_mixed = 0
+            
             for e in range(config["c_pretrain_epochs"]):
                 logger.info('\nClas Pretrain Epoch {}'.format(e))
                 clas_rtns = clas_run_epoch(sess, 'pretrain', sum_writer, clas_rtns['step'])
@@ -1924,8 +1927,25 @@ def main(config = None):
                 clas_pretrain_time = clas_pretrain_time + clas_rtns["total_runtime"]
                 if clas_rtns['loss'] < min_loss:
                     min_loss = clas_rtns['loss']
+                    
+                if config["clas_pretrain_save"] == True:
+                    pre_acc = clas_rtns['real_acc']
+                    pre_f1 = clas_rtns['real_f1']
+                    pre_mixed = 2 * pre_acc * pre_f1 / (pre_acc + pre_f1)
+                    if pre_acc > clas_pre_max_acc:
+                        clas_pre_max_acc = pre_acc
+                        checkpoint.save(sess, os.path.join(checkpoint_dir, 'ckpt-bestclas-acc'))
+                    if pre_mixed > clas_pre_max_mixed:
+                        clas_pre_max_mixed = pre_mixed
+                        checkpoint.save(sess, os.path.join(checkpoint_dir, 'ckpt-bestclas-mixed'))   
 
             logger.info('\nMin Clas Pretrain val loss: {}'.format(min_loss))
+            
+            if config["clas_pretrain_save"] == True:
+                checkpoint.save(sess, os.path.join(checkpoint_dir, 'ckpt-all'))
+                logger.info('\nMax Clas Pretrain val acc: {}'.format(clas_pre_max_acc))
+                logger.info('\nMax Clas Pretrain val mixed: {}'.format(clas_pre_max_mixed))
+                
             logger.info("\nTotal runtime after classifier pretrain: {}".format(total_runtime))
             
             logger.info("\nStarting adversarial training...")
@@ -2098,10 +2118,16 @@ if __name__ == "__main__":
             if "tr{}".format(int(train_pcent*100)) in config_file:
                 for unsup_pcent in [0.0, 0.5, 0.7, 1.0]:
                     if "usp{}".format(int(unsup_pcent * 100)) in config_file:
-                        time_result_file = 'tr{}_usp{}_time'.format(int(train_pcent*100), int(unsup_pcent * 100))
-                        all_result_file = 'tr{}_usp{}_all'.format(int(train_pcent*100), int(unsup_pcent * 100))
-                        bestclas_acc_result_file = 'tr{}_usp{}_bestclas_acc'.format(int(train_pcent*100), int(unsup_pcent * 100))
-                        bestclas_mixed_result_file = 'tr{}_usp{}_bestclas_mixed'.format(int(train_pcent*100), int(unsup_pcent * 100))
+                        if config["clas_pretrain_save"] is True:
+                            time_result_file = 'tr{}_usp{}_nogan_time'.format(int(train_pcent*100), int(unsup_pcent * 100))
+                            all_result_file = 'tr{}_usp{}_nogan_all'.format(int(train_pcent*100), int(unsup_pcent * 100))
+                            bestclas_acc_result_file = 'tr{}_usp{}_nogan_bestclas_acc'.format(int(train_pcent*100), int(unsup_pcent * 100))
+                            bestclas_mixed_result_file = 'tr{}_usp{}_nogan_bestclas_mixed'.format(int(train_pcent*100), int(unsup_pcent * 100))
+                        else:
+                            time_result_file = 'tr{}_usp{}_time'.format(int(train_pcent*100), int(unsup_pcent * 100))
+                            all_result_file = 'tr{}_usp{}_all'.format(int(train_pcent*100), int(unsup_pcent * 100))
+                            bestclas_acc_result_file = 'tr{}_usp{}_bestclas_acc'.format(int(train_pcent*100), int(unsup_pcent * 100))
+                            bestclas_mixed_result_file = 'tr{}_usp{}_bestclas_mixed'.format(int(train_pcent*100), int(unsup_pcent * 100))
                         break
                     else:
                         continue

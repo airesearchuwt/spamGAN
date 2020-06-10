@@ -85,7 +85,8 @@ def make_data(trp, usp, run):
         "gen_perp_output": "perplexities.txt",
         'dir' : curdir,
         "ckptdir": ckptdir,
-        "config_json": os.path.join(curdir, config_json)
+        "config_json": os.path.join(curdir, config_json),
+        "clas_pretrain_save": nogan
     }
 
 
@@ -119,7 +120,7 @@ def make_data(trp, usp, run):
 
 
 trp_list = [0.1, 0.3, 0.5, 0.7, 0.9, 1.0]
-usp_list = [0.0, 0.5, 0.7, 1.0]
+usp_list = [-1, 0.0, 0.5, 0.7, 1.0]
 iter = 5
 
 for train_pcent in trp_list:
@@ -149,6 +150,8 @@ for train_pcent in trp_list:
             base_config["gen_perp_output"] = data_paths['gen_perp_output']
             base_config["log_dir"] = data_paths['dir']
             base_config["checkpoint_dir"] = data_paths['ckptdir']
+            base_config["clas_pretrain_save"] = data_paths['clas_pretrain_save']
+            
             print(base_config["train_data"]['datasets'][0]['files'])
             print('Train Pcent {} Unsup Pcent {} Run {}'.format(train_pcent, unsup_pcent, run))
             
@@ -158,7 +161,7 @@ for train_pcent in trp_list:
             
             train_status = 114514
             while train_status is not 0:
-                train_status = os.system("nice -n 15 python3 spamGAN_train_DCG_gpt2.py {}".format(data_paths["config_json"]))
+                train_status = os.system("nice -n 10 python3 spamGAN_train_DCG_gpt2.py {}".format(data_paths["config_json"]))
             
             # Unit test
             base_config["gen_clas_test"] = True
@@ -170,7 +173,7 @@ for train_pcent in trp_list:
                     
                 test_status = 114514
                 while test_status is not 0:
-                    test_status = os.system("nice -n 15 python3 spamGAN_train_DCG_gpt2.py {}".format(data_paths["config_json"])) 
+                    test_status = os.system("nice -n 10 python3 spamGAN_train_DCG_gpt2.py {}".format(data_paths["config_json"])) 
             
             # Clean disk space
             os.system("rm ./spamGAN_output/ckpt/*")  

@@ -18,6 +18,7 @@
 	"log_dir": "/home/hanfeiyu/Pretrained-spamGAN/ckpt",
 	"checkpoint_dir": "/home/hanfeiyu/Pretrained-spamGAN/ckpt",
 	"load_checkpoint_file": null,
+	"clas_pretrain_save": false,
 
 	"gen_clas_test": false,
 	"gen_test": false,
