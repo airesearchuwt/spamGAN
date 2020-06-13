@@ -6,14 +6,14 @@ import random
 import time
 
 
-BASEDIR = '/home/ubuntu/Pretrained-spamGAN/final_experiments/yelp/spamGAN_output/'
+BASEDIR = '/home/ubuntu/spamGAN-GPT2/final_experiments/yelp/spamGAN_output/'
 
-unsup_revs_path = '/home/ubuntu/Pretrained-spamGAN/final_experiments/yelp/spamGAN_output/yelp_unlabeled_reviews_bpe.txt'
+unsup_revs_path = '/home/ubuntu/spamGAN-GPT2/final_experiments/yelp/spamGAN_output/yelp_unlabeled_reviews_bpe.txt'
 
-train_revs = '/home/ubuntu/Pretrained-spamGAN/final_experiments/yelp/spamGAN_output/yelp_train_reviews_bpe.txt'
-train_labs = '/home/ubuntu/Pretrained-spamGAN/final_experiments/yelp/spamGAN_output/yelp_train_labels.txt'
-test_revs = '/home/ubuntu/Pretrained-spamGAN/final_experiments/yelp/spamGAN_output/yelp_test_reviews_bpe.txt'
-test_labs = '/home/ubuntu/Pretrained-spamGAN/final_experiments/yelp/spamGAN_output/yelp_test_labels.txt'
+train_revs = '/home/ubuntu/spamGAN-GPT2/final_experiments/yelp/spamGAN_output/yelp_train_reviews_bpe.txt'
+train_labs = '/home/ubuntu/spamGAN-GPT2/final_experiments/yelp/spamGAN_output/yelp_train_labels.txt'
+test_revs = '/home/ubuntu/spamGAN-GPT2/final_experiments/yelp/spamGAN_output/yelp_test_reviews_bpe.txt'
+test_labs = '/home/ubuntu/spamGAN-GPT2/final_experiments/yelp/spamGAN_output/yelp_test_labels.txt'
 
 
 def make_data(trp, usp, run):

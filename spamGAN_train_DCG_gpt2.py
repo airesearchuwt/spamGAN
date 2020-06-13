@@ -2109,9 +2109,9 @@ if __name__ == "__main__":
     # Get proportions if it's from final_runner.py
     if "tr" in config_file and "usp" in config_file:
         if "opspam" in config_file:
-            BASEDIR = "/home/hanfeiyu/Pretrained-spamGAN/final_experiments/opspam/spamGAN_output"
+            BASEDIR = "/home/hanfeiyu/spamGAN-GPT2/final_experiments/opspam/spamGAN_output"
         else:
-            BASEDIR = "/home/hanfeiyu/Pretrained-spamGAN/final_experiments/yelp/spamGAN_output"
+            BASEDIR = "/home/hanfeiyu/spamGAN-GPT2/final_experiments/yelp/spamGAN_output"
         data_paths = {}
         
         for train_pcent in [0.1, 0.3, 0.5, 0.7, 0.9, 1.0]:

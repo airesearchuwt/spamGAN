@@ -6,14 +6,14 @@ import random
 import time
 
 
-BASEDIR = '/home/hanfeiyu/Pretrained-spamGAN/final_experiments/opspam/spamGAN_output/'
+BASEDIR = '/home/hanfeiyu/spamGAN-GPT2/final_experiments/opspam/spamGAN_output/'
 
-unsup_revs_path = '/home/hanfeiyu/Pretrained-spamGAN/final_experiments/opspam/spamGAN_output/chicago_unlab_reviews_bpe.txt'
+unsup_revs_path = '/home/hanfeiyu/spamGAN-GPT2/final_experiments/opspam/spamGAN_output/chicago_unlab_reviews_bpe.txt'
 
-train_revs = '/home/hanfeiyu/Pretrained-spamGAN/final_experiments/opspam/spamGAN_output/opspam_train_reviews_bpe.txt'
-train_labs = '/home/hanfeiyu/Pretrained-spamGAN/final_experiments/opspam/spamGAN_output/opspam_train_labels.txt'
-test_revs = '/home/hanfeiyu/Pretrained-spamGAN/final_experiments/opspam/spamGAN_output/opspam_test_reviews_bpe.txt'
-test_labs = '/home/hanfeiyu/Pretrained-spamGAN/final_experiments/opspam/spamGAN_output/opspam_test_labels.txt'
+train_revs = '/home/hanfeiyu/spamGAN-GPT2/final_experiments/opspam/spamGAN_output/opspam_train_reviews_bpe.txt'
+train_labs = '/home/hanfeiyu/spamGAN-GPT2/final_experiments/opspam/spamGAN_output/opspam_train_labels.txt'
+test_revs = '/home/hanfeiyu/spamGAN-GPT2/final_experiments/opspam/spamGAN_output/opspam_test_reviews_bpe.txt'
+test_labs = '/home/hanfeiyu/spamGAN-GPT2/final_experiments/opspam/spamGAN_output/opspam_test_labels.txt'
 
 
 def make_data(trp, usp, run):
