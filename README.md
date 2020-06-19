@@ -1,4 +1,4 @@
 # spamGAN+GPT2
-**Improving GANs for Semi-Supervised Opinion Spam Detection by Leveraging Pre-trained Models**
+**Leveraging Pre-trained Models to improve GANs for Semi-Supervised Opinion Spam Detection by **
 
 In progress project...
