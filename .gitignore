@@ -1,6 +1,10 @@
+# Temp files
 .DS_Store
 cpython-37.pyc
 nohup.out
 yelp.zip
 .pydevproject
 ckpt
+
+# Folders
+.settings/
