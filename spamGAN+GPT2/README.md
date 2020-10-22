@@ -32,7 +32,7 @@ AWS EC2 instance type **g4dn.2xlarge**).
 ## Adapted GPT-2 
 
 In SpamGAN+GPT2, we adapt the GPT-2 Transformer models from Texar to fit in our
-prior work [SpamGan](https://www.ijcai.org/Proceedings/2019/0723.pdf). The code
+prior work [SpamGAN](https://www.ijcai.org/Proceedings/2019/0723.pdf). The code
 of model can be viewed in [custom_texar](./custom_texar). We use the small
 version of GPT-2, settings of the small version can be viewed in
 [gpt2/gpt2-small](./gpt2/gpt2-small).
@@ -41,12 +41,12 @@ version of GPT-2, settings of the small version can be viewed in
 
 After installing dependencies, if you want to train with Opinion Spam, simply try:
 
-```python3 python3 spamGAN_train_DCG_gpt2.py spamGAN_config_smallunsup_opspam.json```
+```python3 spamGAN_train_DCG_gpt2.py spamGAN_config_smallunsup_opspam.json```
 
 to start an experiment with a small subset of Opinion Spam dataset using SpamGAN+GPT2. 
 
 If you want to switch to Yelp Reviews, try:
 
-```python3 python3 spamGAN_train_DCG_gpt2.py spamGAN_config_smallunsup_yelp.json```
+```python3 spamGAN_train_DCG_gpt2.py spamGAN_config_smallunsup_yelp.json```
 
 to start an experiment with a small subset of Yelp Spam dataset using SpamGAN+GPT2. 
