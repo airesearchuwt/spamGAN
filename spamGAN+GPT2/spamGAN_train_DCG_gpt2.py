@@ -2098,8 +2098,8 @@ if __name__ == "__main__":
         
     # Setup
     if config_file is None:
-#         config_file = "spamGAN_config_smallunsup_opspam.json"
-        config_file = "spamGAN_config_smallunsup_yelp.json"
+        config_file = "spamGAN_config_smallunsup_opspam.json"
+        # config_file = "spamGAN_config_smallunsup_yelp.json"
         print('No config given, using {}'.format(config_file))
         config = json.loads(open(config_file).read())
     else:

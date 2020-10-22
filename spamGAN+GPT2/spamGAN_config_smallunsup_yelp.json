@@ -118,7 +118,7 @@
 		"seed": null,
 		"name": "train_data",
 		"datasets": [{
-				"files": ["./gpt2/yelp_train_reviews_bpe.txt"],
+				"files": ["./example_datasets/yelp_train_reviews_bpe.txt"],
 				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
@@ -129,7 +129,7 @@
 				"pad_to_max_seq_length": true
 			},
 			{
-				"files": ["./gpt2/yelp_train_labels.txt"],
+				"files": ["./example_datasets/yelp_train_labels.txt"],
 				"data_type": "int",
 				"data_name": "label"
 			}
@@ -151,7 +151,7 @@
 		"seed": null,
 		"name": "train_data",
 		"datasets": [{
-				"files": ["./gpt2/yelp_train_reviews_bpe.txt"],
+				"files": ["./example_datasets/yelp_train_reviews_bpe.txt"],
 				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
@@ -162,7 +162,7 @@
 				"pad_to_max_seq_length": true
 			},
 			{
-				"files": ["./gpt2/yelp_train_labels.txt"],
+				"files": ["./example_datasets/yelp_train_labels.txt"],
 				"data_type": "int",
 				"data_name": "label"
 			}
@@ -185,7 +185,7 @@
 		"name": "val_data",
 
 		"datasets": [{
-				"files": ["./gpt2/yelp_val_reviews_bpe.txt"],
+				"files": ["./example_datasets/yelp_val_reviews_bpe.txt"],
 				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
@@ -196,7 +196,7 @@
 				"pad_to_max_seq_length": true
 			},
 			{
-				"files": ["./gpt2/yelp_val_labels.txt"],
+				"files": ["./example_datasets/yelp_val_labels.txt"],
 				"data_type": "int",
 				"data_name": "label"
 			}
@@ -217,7 +217,7 @@
 		"seed": null,
 		"name": "test_data",
 		"datasets": [{
-				"files": ["./gpt2/yelp_test_reviews_bpe.txt"],
+				"files": ["./example_datasets/yelp_test_reviews_bpe.txt"],
 				"vocab_file": "./gpt2/gpt2-small/gpt2_vocab.txt",
 				"max_seq_length": 256,
 				"length_filter_mode": "truncate",
@@ -228,7 +228,7 @@
 				"pad_to_max_seq_length": true
 			},
 			{
-				"files": ["./gpt2/yelp_test_labels.txt"],
+				"files": ["./example_datasets/yelp_test_labels.txt"],
 				"data_type": "int",
 				"data_name": "label"
 			}
