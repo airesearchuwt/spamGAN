@@ -12,7 +12,7 @@ The code was developed with Python 3.6.
 
 ## Data
 
-In spamGAN+GPT2 training, we provide two datasets: Opinion Spam, and Yelp
+In spamGAN+GPT2 training, we use two datasets: Opinion Spam, and Yelp
 Reviews. To leverage the most power of GPT-2, we convert the dataset from plain
 text to bpe txt files. The example datasets can be viewed in the
 [example_datasets](./example_datasets). The `minrun` series is a small subset of
