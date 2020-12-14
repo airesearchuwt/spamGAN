@@ -1,0 +1,9 @@
+[Unit]
+Description=Gunicorn Service
+After=network.target
+
+[Service]
+User=ubuntu
+Group=www-data
+WorkingDirectory=/home/ubuntu/spamGAN-as-a-Service/opspam
+ExecStart=/usr/bin/gunicorn3 --timeout 10000  --workers 3 --bind unix:/home/ubuntu/spamGAN-as-a-Service/opspam/spamDetection.sock -m 007 predictor:app
