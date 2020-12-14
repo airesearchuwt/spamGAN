@@ -1,0 +1,29 @@
+.Test {
+    margin: 20px auto;
+    text-align: center;
+    background-color: white;
+}
+
+.Test label {
+    display: block;
+    margin: 10px auto;
+    text-align: center;
+    font-weight: bold;
+}
+
+.Test TextArea {
+    display: block;
+    width: 80%;
+    box-sizing: border-box;
+    border: 1px solid black;
+    outline: none;
+    font: inherit;
+    margin: auto;
+}
+
+
+.Test button:hover,
+.Test button:active {
+    color: white;
+    background-color: #fa923f;
+}
