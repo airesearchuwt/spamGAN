@@ -1,4 +1,4 @@
-# spaMGAN-as-a-service
+# spamGAN-as-a-service
 
 Please go to this link:
 
